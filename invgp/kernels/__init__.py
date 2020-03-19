@@ -1,1 +1,2 @@
-from .invariant import InvariantBase, Invariant, SwitchDimsInvariant
+from .invariant import Invariant
+from . import orbits

@@ -1,1 +1,1 @@
-from .invariant_covariances import Kuf_invariant_base, Kuu_invariant_base, Kuf, Kuu
+from .invariant_covariances import Kuf_convip_invariant, Kuu_convip_invariant, Kuf, Kuu

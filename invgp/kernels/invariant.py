@@ -1,22 +1,15 @@
+import numpy as np
 import tensorflow as tf
 
 import gpflow
+from .image_transforms import rotate_img_angles
 
 
-class InvariantBase(gpflow.kernels.Kernel):
-    def orbit(self, X):
-        raise NotImplementedError
-
-    @property
-    def orbit_size(self):
-        return self._orbit_size
-
-
-class Invariant(InvariantBase):
-    def __init__(self, basekern, orbit_size):
+class Invariant(gpflow.kernels.Kernel):
+    def __init__(self, basekern, orbit):
         super().__init__()
         self.basekern = basekern
-        self._orbit_size = orbit_size
+        self.orbit = orbit
 
     def K(self, X, X2=None):
         X_orbit = self.orbit(X)
@@ -39,10 +32,9 @@ class Invariant(InvariantBase):
         # return tf.reduce_sum(tf.map_fn(self.basekern.K, Xp), [1, 2]) / self.num_patches ** 2.0
 
 
-class SwitchDimsInvariant(Invariant):
-    def __init__(self, basekern):
-        super().__init__(basekern, orbit_size=2)
 
-    def orbit(self, X):
-        X_switch = tf.gather(X, [1, 0], axis=1)
-        return tf.concat([X[:, None, :], X_switch[:, None, :]], axis=1)
+
+
+
+
+

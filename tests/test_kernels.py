@@ -5,11 +5,11 @@ import gpflow
 from gpflow.config import default_jitter
 from invgp.covariances import Kuu, Kuf
 from invgp.inducing_variables import ConvolvedInducingPoints
-from invgp.kernels import SwitchDimsInvariant
+from invgp.kernels import Invariant, orbits
 
 
 def test_conv_diag():
-    kernel = SwitchDimsInvariant(gpflow.kernels.SquaredExponential())
+    kernel = Invariant(gpflow.kernels.SquaredExponential(), orbits.SwitchXY())
     X = np.random.randn(3, 2)
     kernel_full = np.diagonal(kernel(X, full_cov=True))
     kernel_diag = kernel(X, full_cov=False)
@@ -20,7 +20,7 @@ _inducing_variables_and_kernels = [
     [
         2,
         ConvolvedInducingPoints(np.random.randn(71, 2)),
-        SwitchDimsInvariant(gpflow.kernels.SquaredExponential()),
+        Invariant(gpflow.kernels.SquaredExponential(), orbits.SwitchXY()),
     ],
 ]
 
