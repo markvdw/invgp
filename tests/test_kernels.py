@@ -68,10 +68,16 @@ def test_unbiased_kernel_estimate(orbit, orbit_kwargs, orbit_minibatch):
 
     np.testing.assert_allclose(stoch_K, det_K, rtol=0.01)
 
+    # Check diagonal
+    stoch_K_evals = [stoch_k.K_diag(X).numpy() for _ in tqdm(range(200))]
+    stoch_K = sum(stoch_K_evals) / len(stoch_K_evals)
+
+    np.testing.assert_allclose(stoch_K, np.diag(det_K), rtol=0.01, atol=1e-3)
+
 
 def test_infinite_orbit_unbiased_kernel_estimate():
     k = StochasticInvariant(gpflow.kernels.SquaredExponential(),
-                            orbits.GaussianNoiseOrbit(variance=0.02, minibatch_size=100))
+                            orbits.GaussianNoiseOrbit(variance=0.2, minibatch_size=100))
     newlen_squared = (k.basekern.lengthscales + 2 * k.orbit.variance).numpy()
     comp_k = gpflow.kernels.SquaredExponential(lengthscales=newlen_squared ** 0.5,
                                                variance=np.sqrt(k.basekern.lengthscales / newlen_squared))
@@ -79,7 +85,7 @@ def test_infinite_orbit_unbiased_kernel_estimate():
     X1 = np.random.randn(100, 1)
     X2 = np.random.randn(2, 1)
 
-    repeats = 100
+    repeats = 500
     stoch_K = sum([k.K(X1, X2) for _ in tqdm(range(repeats))]) / repeats
     comp_K = comp_k.K(X1, X2)
 

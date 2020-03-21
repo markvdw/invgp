@@ -2,8 +2,8 @@ import tensorflow as tf
 
 from gpflow.base import TensorLike
 from gpflow.covariances.dispatch import Kuf, Kuu
-from ..inducing_variables import ConvolvedInducingPoints
-from ..kernels import Invariant
+from ..inducing_variables import ConvolvedInducingPoints, StochasticConvolvedInducingPoints
+from ..kernels import Invariant, StochasticInvariant
 
 
 @Kuu.register(ConvolvedInducingPoints, Invariant)
@@ -21,3 +21,14 @@ def Kuf_convip_invariant(inducing_variable, kern, Xnew):
     Kzx_orbit = kern.basekern.K(inducing_variable.Z, tf.reshape(Xorbit, (N * orbit_size, -1)))  # [M, N * orbit_sz]
     Kzx = tf.reduce_mean(tf.reshape(Kzx_orbit, (M, N, orbit_size)), [2])
     return Kzx
+
+
+@Kuf.register(StochasticConvolvedInducingPoints, StochasticInvariant, object)
+def Kuf_stochastic_convip_stochastic_invariant(inducing_variable, kern, Xnew):
+    """
+    :return: [M, N, minibatch_size]
+    """
+    N, M = tf.shape(Xnew)[0], tf.shape(inducing_variable.Z)[0]
+    Xorbit = tf.reshape(kern.orbit(Xnew), (N * kern.orbit.minibatch_size, -1))  # [N * minibatch_size, D]
+    Kzx = kern.basekern.K(inducing_variable.Z, Xorbit)  # [M, N * minibatch_size]
+    return tf.reshape(Kzx, (M, N, kern.orbit.minibatch_size))

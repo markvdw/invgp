@@ -65,12 +65,12 @@ class StochasticInvariant(Invariant):
 
         def sumbK(Xp):
             K = self.basekern.K(Xp)  # C x C
-            if self.orbit_minibatch < self.orbit_size:
-                diag_sum = tf.reduce_sum(tf.diag_part(K))
+            if self.orbit.minibatch_size < self.orbit.orbit_size:
+                diag_sum = tf.reduce_sum(tf.linalg.diag_part(K))
                 edge_sum = tf.reduce_sum(K) - diag_sum
 
                 return edge_sum * self.w_edge + diag_sum * self.w_diag
-            elif self.orbit_minibatch == self.orbit_size:
+            elif self.orbit.minibatch_size == self.orbit.orbit_size:
                 return tf.reduce_mean(K)
 
         return tf.map_fn(sumbK, Xp)
@@ -90,4 +90,4 @@ class StochasticInvariant(Invariant):
 
     @property
     def mw_full(self):
-        return self.orbit_minibatch / (self.orbit_minibatch - 1) * (1.0 - 1.0 / self.orbit_size)
+        return self.orbit.minibatch_size / (self.orbit.minibatch_size - 1) * (1.0 - 1.0 / self.orbit.orbit_size)
