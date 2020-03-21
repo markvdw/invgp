@@ -1,2 +1,2 @@
-from .invariant import Invariant
+from .invariant import Invariant, StochasticInvariant
 from . import orbits

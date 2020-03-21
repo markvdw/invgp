@@ -4,23 +4,18 @@ import tensorflow as tf
 import gpflow
 import invgp
 from gpflow.utilities import set_trainable
+from datasets import load_mnist
 
 np.random.seed(1)
 
 # Generate dataset
-mnist = tf.keras.datasets.mnist.load_data()[0]
-mnist_X_full = mnist[0].reshape(-1, 28 * 28).astype(gpflow.config.default_float()) / 255.0
-mnist_Y_full = mnist[1].reshape(-1, 1).astype(gpflow.config.default_int())
-
-select23 = np.logical_or(mnist_Y_full[:, 0] == 2, mnist_Y_full[:, 0] == 3)
-mnist_X_23 = mnist_X_full[select23, :]
-mnist_Y_23 = mnist_Y_full[select23, :]
+(mnist_X_23, mnist_Y_23), _ = load_mnist(digits=[2, 3])
 random_subset = np.random.permutation(len(mnist_X_23))[:97]
 mnist_X_23 = mnist_X_23[random_subset, :]
 mnist_Y_23 = mnist_Y_23[random_subset, :]
 
 gen_orbit = invgp.kernels.orbits.ImageRotQuant(3, interpolation_method="BILINEAR")
-orbit_X = gen_orbit(mnist_X_23).numpy().reshape(-1, mnist_X_full.shape[1])
+orbit_X = gen_orbit(mnist_X_23).numpy().reshape(-1, mnist_X_23.shape[1])
 orbit_Y = np.repeat(mnist_Y_23[:, None, :], gen_orbit.orbit_size, 1).reshape(-1, 1)
 random_perm = np.random.permutation(len(orbit_X))
 X = orbit_X[random_perm[:500], :]
@@ -42,6 +37,7 @@ opt_logs = opt.minimize(tf.function(lambda: -sqexp_m.log_marginal_likelihood()),
                         sqexp_m.trainable_variables, options=dict(maxiter=1000, disp=True))
 
 sqexp_err = (1.0 - ((sqexp_m.predict_f(Xt)[0] > 0.0) == (Yt > 0.0)).numpy().mean()) * 100
+gpflow.utilities.print_summary(sqexp_m)
 
 #
 # Rot90 model
