@@ -94,7 +94,11 @@ def apply_stn_batch(Ximgs, thetas):
     :return: [None, P, H*W]
     """
 
+    Ximgs = tf.cast(Ximgs, tf.float32)
+    thetas = tf.cast(thetas, tf.float32)
+
     if len(Ximgs.get_shape()) == 3:
         Ximgs = tf.expand_dims(Ximgs, -1)  # [None, H, W, 1]
 
-    return tf.transpose(tf.map_fn(lambda x: _apply_stn(Ximgs, x), thetas, dtype=default_float()), (1, 0, 2))
+    result = tf.transpose(tf.map_fn(lambda x: _apply_stn(Ximgs, x), thetas, dtype=Ximgs.dtype), (1, 0, 2))
+    return tf.cast(result, default_float())

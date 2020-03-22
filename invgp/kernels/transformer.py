@@ -23,7 +23,6 @@ SOFTWARE.
 """
 
 import tensorflow as tf
-from .transformer_utils.print_utils import *
 
 
 def spatial_transformer_network(input_fmap, theta, out_dims=None, **kwargs):

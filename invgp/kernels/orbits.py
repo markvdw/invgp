@@ -3,7 +3,9 @@ import tensorflow as tf
 from tensorflow_probability import bijectors as tfb
 
 import gpflow
-from .image_transforms import rotate_img_angles, rotate_img_angles_stn
+from gpflow.config import default_float
+from gpflow.utilities.bijectors import positive
+from .image_transforms import rotate_img_angles, rotate_img_angles_stn, apply_stn_batch
 
 
 class Orbit(gpflow.base.Module):
@@ -121,14 +123,14 @@ class ImageRotation(ImageOrbit):
                  input_dim=None, img_size=None, minibatch_size=10, **kwargs):
         super().__init__(np.inf, input_dim=input_dim, img_size=img_size, minibatch_size=minibatch_size, **kwargs)
         self.interpolation = interpolation_method if not use_stn else "BILINEAR"
-        low_const = tf.constant(0.0, dtype=gpflow.config.default_float())
-        high_const = tf.constant(180.0, dtype=gpflow.config.default_float())
+        low_const = tf.constant(0.0, dtype=default_float())
+        high_const = tf.constant(180.0, dtype=default_float())
         self.angle = gpflow.Parameter(angle, transform=tfb.Sigmoid(low_const, high_const))  # constrained to [0, 180]
         self.use_stn = use_stn
 
     def orbit_minibatch(self, X):
         # Reparameterise angle
-        eps = tf.random.uniform([self.minibatch_size], 0., 1., dtype=gpflow.config.default_float())
+        eps = tf.random.uniform([self.minibatch_size], 0., 1., dtype=default_float())
         angles = -self.angle + 2. * self.angle * eps
 
         Ximgs = tf.reshape(X, [-1, self.img_size(X), self.img_size(X)])
@@ -136,3 +138,57 @@ class ImageRotation(ImageOrbit):
             return rotate_img_angles_stn(Ximgs, angles)  # STN always uses bilinear interpolation
         else:
             return rotate_img_angles(Ximgs, angles, self.interpolation)
+
+
+class GeneralSpatialTransform(ImageOrbit):
+    """
+    Kernel invariant to to transformations using Spatial Transformer Networks (STNs); this correponds to six-parameter
+    affine transformations.
+    This version of the kernel is parameterised by the six independent parameters directly (thus "_general")
+    """
+
+    def __init__(self, theta_min=np.array([1., 0., 0., 0., 1., 0.]),
+                 theta_max=np.array([1., 0., 0., 0., 1., 0.]), constrain=False, input_dim=None, img_size=None,
+                 minibatch_size=10, **kwargs):
+        """
+        :param theta_min: one end of the range; identity = [1, 0, 0, 0, 1, 0]
+        :param theta_max: other end of the range; identity = [1, 0, 0, 0, 1, 0]
+        :param constrain: whether theta_min is always below the identity and theta_max always above
+        """
+        super().__init__(np.inf, input_dim=input_dim, img_size=img_size, minibatch_size=minibatch_size, **kwargs)
+        self.constrain = constrain
+        if constrain:
+            self.theta_min_0 = gpflow.Parameter(1. - theta_min[0], dtype=default_float(), transform=positive())
+            self.theta_min_1 = gpflow.Parameter(-theta_min[1], dtype=default_float(), transform=positive())
+            self.theta_min_2 = gpflow.Parameter(-theta_min[2], dtype=default_float(), transform=positive())
+            self.theta_min_3 = gpflow.Parameter(-theta_min[3], dtype=default_float(), transform=positive())
+            self.theta_min_4 = gpflow.Parameter(1. - theta_min[4], dtype=default_float(), transform=positive())
+            self.theta_min_5 = gpflow.Parameter(-theta_min[5], dtype=default_float(), transform=positive())
+
+            self.theta_max_0 = gpflow.Parameter(theta_min[0], dtype=default_float(), transform=positive(lower=1.))
+            self.theta_max_1 = gpflow.Parameter(theta_min[1], dtype=default_float(), transform=positive())
+            self.theta_max_2 = gpflow.Parameter(theta_min[2], dtype=default_float(), transform=positive())
+            self.theta_max_3 = gpflow.Parameter(theta_min[3], dtype=default_float(), transform=positive())
+            self.theta_max_4 = gpflow.Parameter(theta_min[4], dtype=default_float(), transform=positive(lower=1.))
+            self.theta_max_5 = gpflow.Parameter(theta_min[5], dtype=default_float(), transform=positive())
+        else:
+            self.theta_min = gpflow.Parameter(theta_min, dtype=default_float())
+            self.theta_max = gpflow.Parameter(theta_max, dtype=default_float())
+
+    def orbit_minibatch(self, X):
+        eps = tf.random.uniform([self.minibatch_size, 6], 0., 1., dtype=default_float())
+        if self.constrain:
+            theta_min = tf.stack([1. - self.theta_min_0, -self.theta_min_1, -self.theta_min_2, -self.theta_min_3,
+                                  1. - self.theta_min_4, -self.theta_min_5])
+            theta_max = tf.stack([self.theta_max_0, self.theta_max_1, self.theta_max_2, self.theta_max_3,
+                                  self.theta_max_4, self.theta_max_5])
+            theta_min = tf.reshape(theta_min, [1, -1])
+            theta_max = tf.reshape(theta_max, [1, -1])
+        else:
+            theta_min = tf.reshape(self.theta_min, [1, -1])
+            theta_max = tf.reshape(self.theta_max, [1, -1])
+        thetas = theta_min + (theta_max - theta_min) * eps
+
+        Ximgs = tf.reshape(X, [-1, self.img_size(X), self.img_size(X)])
+
+        return apply_stn_batch(Ximgs, thetas)
