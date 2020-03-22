@@ -1,11 +1,14 @@
 import numpy as np
 import tensorflow as tf
+from tensorflow_probability import bijectors as tfb
 
-from .image_transforms import rotate_img_angles
+import gpflow
+from .image_transforms import rotate_img_angles, rotate_img_angles_stn
 
 
-class Orbit:
-    def __init__(self, orbit_size, minibatch_size=None):
+class Orbit(gpflow.base.Module):
+    def __init__(self, orbit_size, minibatch_size=None, name=None):
+        super().__init__(name=name)
         self._orbit_size = orbit_size
         self.minibatch_size = minibatch_size if minibatch_size is not None else orbit_size
 
@@ -37,8 +40,8 @@ class SwitchXY(Orbit):
 
 
 class GaussianNoiseOrbit(Orbit):
-    def __init__(self, variance=1.0, minibatch_size=10):
-        super().__init__(np.inf, minibatch_size)
+    def __init__(self, variance=1.0, minibatch_size=10, **kwargs):
+        super().__init__(np.inf, minibatch_size, **kwargs)
         self.variance = variance
 
     def orbit_minibatch(self, X):
@@ -47,8 +50,8 @@ class GaussianNoiseOrbit(Orbit):
 
 
 class ImageOrbit(Orbit):
-    def __init__(self, orbit_size, input_dim=None, img_size=None, **kwargs):
-        super().__init__(orbit_size, **kwargs)
+    def __init__(self, orbit_size, input_dim=None, img_size=None, minibatch_size=None, **kwargs):
+        super().__init__(orbit_size, minibatch_size=minibatch_size, **kwargs)
         if input_dim is not None and img_size is None:
             img_size = int(input_dim ** 0.5)
         elif input_dim is None and img_size is not None:
@@ -108,3 +111,28 @@ class ImageRotQuant(ImageOrbit):
         img_size = self.img_size(X)
         Ximgs = tf.reshape(X, [-1, img_size, img_size])
         return rotate_img_angles(Ximgs, self.angles, self.interpolation_method)
+
+
+ANGLE_JITTER = 1e0  # minimal value for the angle variable (to be safe when transforming to logistic)
+
+
+class ImageRotation(ImageOrbit):
+    def __init__(self, angle=ANGLE_JITTER, interpolation_method="NEAREST", use_stn=False,
+                 input_dim=None, img_size=None, minibatch_size=10, **kwargs):
+        super().__init__(np.inf, input_dim=input_dim, img_size=img_size, minibatch_size=minibatch_size, **kwargs)
+        self.interpolation = interpolation_method if not use_stn else "BILINEAR"
+        low_const = tf.constant(0.0, dtype=gpflow.config.default_float())
+        high_const = tf.constant(180.0, dtype=gpflow.config.default_float())
+        self.angle = gpflow.Parameter(angle, transform=tfb.Sigmoid(low_const, high_const))  # constrained to [0, 180]
+        self.use_stn = use_stn
+
+    def orbit_minibatch(self, X):
+        # Reparameterise angle
+        eps = tf.random.uniform([self.minibatch_size], 0., 1., dtype=gpflow.config.default_float())
+        angles = -self.angle + 2. * self.angle * eps
+
+        Ximgs = tf.reshape(X, [-1, self.img_size(X), self.img_size(X)])
+        if self.use_stn:
+            return rotate_img_angles_stn(Ximgs, angles)  # STN always uses bilinear interpolation
+        else:
+            return rotate_img_angles(Ximgs, angles, self.interpolation)

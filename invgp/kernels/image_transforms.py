@@ -8,12 +8,12 @@ from .transformer import spatial_transformer_network as stn
 
 def rotate_img_angles(Ximgs, angles, interpolation_method):
     """
-    Only works with float32.
     :param Ximgs: Images to rotate.
     :param angles: Angles in degrees to rotate by.
     :param interpolation_method: Interpolation method.
     :return:
     """
+
     def rotate(angle):
         anglerad = tf.cast(angle / 180 * np.pi, tf.float32)
         return tf.reshape(
@@ -32,6 +32,8 @@ def rotate_img_angles_stn(Ximgs, angles):
     :param angles: angles in degrees to rotate by [P]
     :return: [None, P, H*W]
     """
+    Ximgs = tf.cast(Ximgs, tf.float32)
+    angles = tf.cast(angles, tf.float32)
 
     if len(Ximgs.get_shape()) == 3:
         Ximgs = tf.expand_dims(Ximgs, -1)  # [None, H, W, 1]
@@ -48,7 +50,8 @@ def rotate_img_angles_stn(Ximgs, angles):
             tf.squeeze(stn(Ximgs, theta)), [tf.shape(Ximgs)[0], tf.shape(Ximgs)[1] * tf.shape(Ximgs)[2]]
         )  # [None, H*W]
 
-    return tf.transpose(tf.map_fn(rotate, angles, dtype=default_float()), (1, 0, 2))  # [None, P, H*W]
+    result = tf.transpose(tf.map_fn(rotate, angles, dtype=Ximgs.dtype), (1, 0, 2))
+    return tf.cast(result, default_float())  # [None, P, H*W]
 
 
 def _stn_theta_vec(angle_deg, sx, sy, tx, ty):
