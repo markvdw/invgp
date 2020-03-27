@@ -5,10 +5,13 @@ import gpflow
 
 
 def load_mnist(digits=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]):
-    mnist = tf.keras.datasets.mnist.load_data()[0]
-    mnist_X_full = mnist[0].reshape(-1, 28 * 28).astype(gpflow.config.default_float()) / 255.0
-    mnist_Y_full = mnist[1].reshape(-1, 1).astype(gpflow.config.default_int())
-    select = np.isin(mnist_Y_full[:, 0], digits)
-    X = mnist_X_full[select, :]
-    Y = mnist_Y_full[select, :]
-    return (X, Y), (None, None)  # Todo: Return testing data as well
+    mnist = tf.keras.datasets.mnist.load_data()
+    full_X_train, full_X_test = [x[0].reshape(-1, 28 * 28).astype(gpflow.config.default_float()) / 255.0
+                                 for x in mnist]
+    full_Y_train, full_Y_test = [x[1].reshape(-1, 1).astype(gpflow.config.default_int())
+                                 for x in mnist]
+    select_train = np.isin(full_Y_train[:, 0], digits)
+    X, Y = [x[select_train, :] for x in [full_X_train, full_Y_train]]
+    select_test = np.isin(full_Y_test[:, 0], digits)
+    Xt, Yt = [x[select_test, :] for x in [full_X_test, full_Y_test]]
+    return (X, Y), (Xt, Yt)
