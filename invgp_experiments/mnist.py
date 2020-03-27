@@ -6,7 +6,7 @@ import json_tricks
 import numpy as np
 import numpy.random as rnd
 import tensorflow as tf
-from invgp_experiments.datasets import load_mnist
+from invgp_experiments.datasets import load_mnist, load_mnist_rot
 from invgp_experiments.utils import get_next_filename
 
 import gpflow
@@ -114,16 +114,21 @@ class Experiment:
 class FullBatchMnist(Experiment):
     # Run parameters
     dataset_size: Optional[int] = -1
+    dataset_name: Optional[str] = "mnist"
     storage_path: Optional[str] = "./results/FullBatchMnist"
 
     data_minibatch_size: Optional[int] = None
     M: Optional[int] = 500
+    kernel_name: Optional[str] = "SquaredExponential"
 
     optimisation_method: Optional[str] = "joint"  # joint | coord-ascent
     inducing_variable_trainable: Optional[bool] = True
 
     def setup_model(self):
-        kernel = gpflow.kernels.SquaredExponential()
+        if self.kernel_name == "SquaredExponential":
+            kernel = gpflow.kernels.SquaredExponential()
+        else:
+            raise NotImplementedError
         M = min(self.M, self.dataset_size)
         inducing_variable = gpflow.inducing_variables.InducingPoints(np.zeros((M, 28 * 28)))
         self.model = gpflow.models.SGPR((self.X, self.Y), kernel, inducing_variable=inducing_variable)
@@ -164,7 +169,12 @@ class FullBatchMnist(Experiment):
             self.trained_parameters = gpflow.utilities.read_values(self.model)
 
     def load_data(self):
-        (self._X, Y), (self._X_test, Y_test) = load_mnist()
+        if self.dataset_name == "mnist":
+            (self._X, Y), (self._X_test, Y_test) = load_mnist()
+        elif self.dataset_name == "mnist-rot":
+            (self._X, Y), (self._X_test, Y_test) = load_mnist_rot()
+        else:
+            raise NotImplementedError
         self._Y = np.eye(10)[Y[:, 0]].astype(gpflow.config.default_float())
         self._Y_test = np.eye(10)[Y_test[:, 0]].astype(gpflow.config.default_float())
 
