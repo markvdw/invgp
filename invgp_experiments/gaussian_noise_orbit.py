@@ -28,7 +28,7 @@ Z = np.linspace(-0.5, 6.5, 20)[:, None]
 # Train deterministic model
 det_m = gpflow.models.SGPR((X, Y), det_k, inducing_variable=Z.copy())
 opt = gpflow.optimizers.Scipy()
-opt_logs = opt.minimize(tf.function(lambda: -det_m.log_marginal_likelihood()),
+opt_logs = opt.minimize(tf.function(lambda: -det_m.elbo()),
                         det_m.trainable_variables,
                         options=dict(maxiter=1000))
 m, v = det_m.predict_y(pX)

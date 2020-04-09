@@ -29,11 +29,11 @@ sqexp_m = gpflow.models.GPR((X, Y), gpflow.kernels.SquaredExponential())
 sqexp_m.kernel.lengthscales.assign(50)
 set_trainable(sqexp_m.likelihood, False)
 opt = gpflow.optimizers.Scipy()
-opt_logs = opt.minimize(tf.function(lambda: -sqexp_m.log_marginal_likelihood()),
+opt_logs = opt.minimize(tf.function(lambda: -sqexp_m.elbo()),
                         sqexp_m.trainable_variables, options=dict(maxiter=1000, disp=True))
 set_trainable(sqexp_m.likelihood, True)
 opt = gpflow.optimizers.Scipy()
-opt_logs = opt.minimize(tf.function(lambda: -sqexp_m.log_marginal_likelihood()),
+opt_logs = opt.minimize(tf.function(lambda: -sqexp_m.elbo()),
                         sqexp_m.trainable_variables, options=dict(maxiter=1000, disp=True))
 
 sqexp_err = (1.0 - ((sqexp_m.predict_f(Xt)[0] > 0.0) == (Yt > 0.0)).numpy().mean()) * 100
@@ -47,11 +47,11 @@ rot90_m = gpflow.models.GPR((X, Y), rot90_k)
 rot90_m.kernel.basekern.lengthscales.assign(50)
 set_trainable(rot90_m.likelihood, False)
 opt = gpflow.optimizers.Scipy()
-opt_logs = opt.minimize(tf.function(lambda: -rot90_m.log_marginal_likelihood()),
+opt_logs = opt.minimize(tf.function(lambda: -rot90_m.elbo()),
                         rot90_m.trainable_variables, options=dict(maxiter=1000, disp=True))
 set_trainable(rot90_m.likelihood, True)
 opt = gpflow.optimizers.Scipy()
-opt_logs = opt.minimize(tf.function(lambda: -rot90_m.log_marginal_likelihood()),
+opt_logs = opt.minimize(tf.function(lambda: -rot90_m.elbo()),
                         rot90_m.trainable_variables, options=dict(maxiter=1000, disp=True))
 
 rot90_err = (1.0 - ((rot90_m.predict_f(Xt)[0] > 0.0) == (Yt > 0.0)).numpy().mean()) * 100
@@ -64,11 +64,11 @@ rotq_m = gpflow.models.GPR((X, Y), rotq_k)
 rotq_m.kernel.basekern.lengthscales.assign(50)
 set_trainable(rotq_m.likelihood, False)
 opt = gpflow.optimizers.Scipy()
-opt_logs = opt.minimize(tf.function(lambda: -rotq_m.log_marginal_likelihood()),
+opt_logs = opt.minimize(tf.function(lambda: -rotq_m.elbo()),
                         rotq_m.trainable_variables, options=dict(maxiter=1000, disp=True))
 set_trainable(rotq_m.likelihood, True)
 opt = gpflow.optimizers.Scipy()
-opt_logs = opt.minimize(tf.function(lambda: -rotq_m.log_marginal_likelihood()),
+opt_logs = opt.minimize(tf.function(lambda: -rotq_m.elbo()),
                         rotq_m.trainable_variables, options=dict(maxiter=1000, disp=True))
 
 rotq_err = (1.0 - ((rotq_m.predict_f(Xt)[0] > 0.0) == (Yt > 0.0)).numpy().mean()) * 100

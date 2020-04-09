@@ -144,7 +144,7 @@ class FullBatchMnist(Experiment):
         try:
             if self.optimisation_method == "joint":
                 opt = gpflow.optimizers.Scipy()
-                opt.minimize(tf.function(lambda: -self.model.log_marginal_likelihood()), self.model.trainable_variables,
+                opt.minimize(tf.function(lambda: -self.model.elbo()), self.model.trainable_variables,
                              options=dict(maxiter=1000, disp=True))
             elif self.optimisation_method == "coord-ascent":
                 for i in range(100):
@@ -152,14 +152,14 @@ class FullBatchMnist(Experiment):
                     set_trainable(self.model.kernel, True)
                     set_trainable(self.model.likelihood, True)
                     opt = gpflow.optimizers.Scipy()
-                    opt.minimize(tf.function(lambda: -self.model.log_marginal_likelihood()),
+                    opt.minimize(tf.function(lambda: -self.model.elbo()),
                                  self.model.trainable_variables, options=dict(maxiter=100, disp=True))
 
                     set_trainable(self.model.inducing_variable, True)
                     set_trainable(self.model.kernel, False)
                     set_trainable(self.model.likelihood, False)
                     opt = gpflow.optimizers.Scipy()
-                    opt.minimize(tf.function(lambda: -self.model.log_marginal_likelihood()),
+                    opt.minimize(tf.function(lambda: -self.model.elbo()),
                                  self.model.trainable_variables, options=dict(maxiter=120, disp=True))
             else:
                 raise NotImplementedError
