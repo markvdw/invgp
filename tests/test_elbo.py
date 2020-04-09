@@ -120,7 +120,7 @@ def test_elbo():
 
     stoch_m.elbo((X, Y))
     fast_lml = tf.function(lambda: stoch_m.elbo((X, Y)))
-    stoch_lml = np.mean([fast_lml() for _ in tqdm(range(1000))])
+    stoch_lml = np.mean([fast_lml() for _ in tqdm(range(2000))])
     det_lml = det_m.elbo()
 
     print(stoch_lml)
