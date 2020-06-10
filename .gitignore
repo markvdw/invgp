@@ -4,3 +4,4 @@
 invgp.egg-info/
 htmlcov/
 *.npz
+results/
