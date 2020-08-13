@@ -18,7 +18,7 @@ class sample_SVGP(SVGP):
         q_sqrt=None,
         whiten: bool = True,
         num_data=None,
-        S_a_S_g: int = 5,
+        S_f: int = 5,
     ):
         """
         - kernel, likelihood, inducing_variables, mean_function are appropriate
@@ -33,7 +33,7 @@ class sample_SVGP(SVGP):
         """
         # init the super class, accept args
         super().__init__(kernel, likelihood, inducing_variable, num_latent_gps=num_latent_gps)
-        self.S_a_S_g = S_a_S_g
+        self.S_f = S_f
 
 
     def elbo(self, data: RegressionData): 
@@ -50,13 +50,11 @@ class sample_SVGP(SVGP):
         P = self.num_latent_gps
 
         kl = self.prior_kl()
-        print('X shape is', X.shape)
-        f_samples = self.predict_f_samples(X, num_samples=self.S_a_S_g, full_cov=False, full_output_cov=False) # now: [S_a_S_g, N, P] (later: [S_a, S_g, N, P] ?)
-        print('f_samples shape is', f_samples.shape) 
+        f_samples = self.predict_f_samples(X, num_samples=self.S_f, full_cov=False, full_output_cov=False) # now: [S_a_S_g, N, P] (later: [S_a, S_g, N, P] ?)
 
         # expand Y to the right dimensions
         Y = tf.expand_dims(Y, 0) # (1, 50, 10)
-        Y = tf.tile(Y, [self.S_a_S_g, 1, 1])
+        Y = tf.tile(Y, [self.S_f, 1, 1])
         # compute likelihoods
         likelihoods = self.likelihood.log_prob(f_samples, Y)
         # compute expectations over g and X_a
