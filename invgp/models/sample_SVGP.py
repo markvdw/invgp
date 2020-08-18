@@ -51,9 +51,8 @@ class sample_SVGP(SVGP):
         #P = self.num_latent_gps
 
         kl = self.prior_kl()
-        #print('X shape is', X.shape)
         f_samples = self.predict_f_samples(X, num_samples=self.S_f, full_cov=True, full_output_cov=False) # [S_f, N, P]
-        #print('f_samples shape is', f_samples.shape) 
+
 
         # expand Y to the right dimensions
         Y = tf.expand_dims(Y, 0) # (1, 50, 10)
