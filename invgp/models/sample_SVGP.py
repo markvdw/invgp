@@ -78,13 +78,13 @@ class sample_SVGP(SVGP):
             full_output_cov: bool = False) -> tf.Tensor:
         
         
-        #X_o = self.kernel.orbit(Xnew) # [N, C, D]
-        #Xnew = tf.reshape(X_o, [X_o.shape[0]*X_o.shape[1], X_o.shape[2]]) # [NC, D]
+        X_o = self.kernel.orbit(Xnew) # [N, C, D]
+        Xnew = tf.reshape(X_o, [X_o.shape[0]*X_o.shape[1], X_o.shape[2]]) # [NC, D]
         q_mu = self.q_mu; q_sqrt = self.q_sqrt;
         mu, var = conditional(
             Xnew,
             self.inducing_variable,
-            self.kernel, #.basekern,
+            self.kernel.basekern,
             q_mu,
             q_sqrt=q_sqrt,
             full_cov=full_cov,
@@ -97,6 +97,6 @@ class sample_SVGP(SVGP):
         )  # [..., (S), P, NC]
         samples = tf.linalg.adjoint(samples)  # [..., (S), NC, P]
         
-        #samples = tf.reshape(samples, [num_samples, X_o.shape[0], X_o.shape[1], samples.shape[2]]) # [S, N, C, P]
-        #samples = tf.reduce_mean(samples, axis = 2) # [S, N, P]
+        samples = tf.reshape(samples, [num_samples, X_o.shape[0], X_o.shape[1], samples.shape[2]]) # [S, N, C, P]
+        samples = tf.reduce_mean(samples, axis = 2) # [S, N, P]
         return samples #[..., (S), N, P]

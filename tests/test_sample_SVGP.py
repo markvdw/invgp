@@ -9,9 +9,6 @@ from invgp.inducing_variables.invariant_convolution_domain import StochasticConv
 from invgp.models import sample_SVGP
 from gpflow.models import SVGP
 
-import numpy as np
-import tensorflow as tf
-
 
 np.random.seed(1)
 
