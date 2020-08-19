@@ -29,7 +29,7 @@ optimizer = tf.keras.optimizers.Adam()
 @tf.function
 def optimization_step():
     optimizer.minimize(training_loss, SVGP_model.trainable_variables)
-for step in range(5000):
+for step in range(50):
     optimization_step()
     minibatch_elbo = -training_loss().numpy()
     print('Step: %s, Mini batch elbo: %s' % (step, minibatch_elbo))

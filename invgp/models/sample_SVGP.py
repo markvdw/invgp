@@ -2,9 +2,8 @@ from gpflow.models import SVGP
 from gpflow.models.model import GPModel, InputData, RegressionData, MeanAndVariance
 import numpy as np
 import tensorflow as tf
+from gpflow.conditionals import conditional, sample_conditional
 
-from gpflow.conditionals import conditional
-from gpflow.conditionals.util import sample_mvn
 class sample_SVGP(SVGP):
     def __init__(
         self,
@@ -59,7 +58,7 @@ class sample_SVGP(SVGP):
         Y = tf.tile(Y, [self.S_f, 1, 1])
         # compute likelihoods
         likelihoods = self.likelihood.log_prob(f_samples, Y)
-        # compute expectations over g and X_a
+        # compute expectations over g
         exp_likelihood = tf.reduce_mean(likelihoods, axis=0) # N
 
         if self.num_data is not None:
@@ -70,33 +69,19 @@ class sample_SVGP(SVGP):
             scale = tf.cast(1.0, kl.dtype)
         return tf.reduce_sum(exp_likelihood) * scale - kl
 
+
     def predict_f_samples(
             self,
             Xnew: InputData,
             num_samples: int = None,
             full_cov: bool = True,
             full_output_cov: bool = False) -> tf.Tensor:
-        
-        
-        X_o = self.kernel.orbit(Xnew) # [N, C, D]
-        Xnew = tf.reshape(X_o, [X_o.shape[0]*X_o.shape[1], X_o.shape[2]]) # [NC, D]
-        q_mu = self.q_mu; q_sqrt = self.q_sqrt;
-        mu, var = conditional(
-            Xnew,
-            self.inducing_variable,
-            self.kernel.basekern,
-            q_mu,
-            q_sqrt=q_sqrt,
+        print('Running sample_SVGP.predict_f_samples.')
+        samples, _, _ = sample_conditional(Xnew, self.inducing_variable, self.kernel, self.q_mu,
             full_cov=full_cov,
+            full_output_cov=full_output_cov,
+            q_sqrt=self.q_sqrt,
             white=self.whiten,
-            full_output_cov=full_output_cov)
-        
-        mu = tf.linalg.adjoint(mu)  # [..., P, NC]
-        samples = sample_mvn(
-            mu, var, full_cov=True, num_samples=num_samples
-        )  # [..., (S), P, NC]
-        samples = tf.linalg.adjoint(samples)  # [..., (S), NC, P]
-        
-        samples = tf.reshape(samples, [num_samples, X_o.shape[0], X_o.shape[1], samples.shape[2]]) # [S, N, C, P]
-        samples = tf.reduce_mean(samples, axis = 2) # [S, N, P]
+            num_samples=num_samples)
+
         return samples #[..., (S), N, P]

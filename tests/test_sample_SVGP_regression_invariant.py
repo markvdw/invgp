@@ -11,8 +11,10 @@ from gpflow.models import SVGP
 # generate 200 datapoints
 X = np.random.uniform(0, 6, 400)[:, None]
 X = np.reshape(X, [200, 2]) # 2-dimensional input
-Y = 2*X + np.random.randn(*X.shape) * 0.1
-Y = Y[:,1][:,None]
+M = np.ones([2, 1]) * 2
+Y = np.matmul(X, M) # + np.random.randn(*X.shape) * 0.1
+print(Y.shape)
+# Y = Y[:,None]
 train_dataset = tf.data.Dataset.from_tensor_slices((X, Y))
 train_dataset = train_dataset.shuffle(1024).batch(50)
 
@@ -38,7 +40,7 @@ optimizer = tf.keras.optimizers.Adam()
 @tf.function
 def optimization_step():
     optimizer.minimize(training_loss, SVGP_model.trainable_variables)
-for step in range(5000):
+for step in range(50):
     optimization_step()
     minibatch_elbo = -training_loss().numpy()
     print('Step: %s, Mini batch elbo: %s' % (step, minibatch_elbo))
