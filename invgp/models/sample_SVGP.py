@@ -3,6 +3,10 @@ from gpflow.models.model import GPModel, InputData, RegressionData, MeanAndVaria
 import numpy as np
 import tensorflow as tf
 from gpflow.conditionals import conditional, sample_conditional
+from gpflow_sampling.samplers import decoupled
+from invgp.samplers import sample_matheron
+# from invgp.samplers import sampler
+
 
 class sample_SVGP(SVGP):
     def __init__(
@@ -18,7 +22,9 @@ class sample_SVGP(SVGP):
         q_sqrt=None,
         whiten: bool = True,
         num_data=None,
-        S_f: int = 5,
+        num_samples: int = 5,
+        matheron_sampler: bool = False,
+        num_basis: int = 1024,
     ):
         """
         - kernel, likelihood, inducing_variables, mean_function are appropriate
@@ -33,7 +39,21 @@ class sample_SVGP(SVGP):
         """
         # init the super class, accept args
         super().__init__(kernel, likelihood, inducing_variable, num_latent_gps=num_latent_gps)
-        self.S_f = S_f
+        self.matheron_sampler = matheron_sampler
+        self._sampler = None
+        self.num_samples = num_samples
+        self.num_basis = num_basis
+
+    @property
+    def sampler(self) -> decoupled:
+        # Use persistent sampler to avoid repeatedly creating <tf.Variable>
+        if self.matheron_sampler and self._sampler is None:  
+            from gpflow_sampling.samplers import decoupled
+            self._sampler = decoupled(self,
+                                      self.kernel.basekern,
+                                      sample_shape=[self.num_samples],
+                                      num_basis=self.num_basis)
+        return self._sampler
 
 
     def elbo(self, data: RegressionData): 
@@ -50,12 +70,12 @@ class sample_SVGP(SVGP):
         #P = self.num_latent_gps
 
         kl = self.prior_kl()
-        f_samples = self.predict_f_samples(X, num_samples=self.S_f, full_cov=True, full_output_cov=False) # [S_f, N, P]
 
+        f_samples = self.predict_f_samples(X, num_samples=self.num_samples, full_cov=True, full_output_cov=False, matheron_sampler=self.matheron_sampler) # [S_f, N, P]
 
         # expand Y to the right dimensions
         Y = tf.expand_dims(Y, 0) # (1, 50, 10)
-        Y = tf.tile(Y, [self.S_f, 1, 1])
+        Y = tf.tile(Y, [self.num_samples, 1, 1])
         # compute likelihoods
         likelihoods = self.likelihood.log_prob(f_samples, Y)
         # compute expectations over g
@@ -75,13 +95,18 @@ class sample_SVGP(SVGP):
             Xnew: InputData,
             num_samples: int = None,
             full_cov: bool = True,
-            full_output_cov: bool = False) -> tf.Tensor:
+            full_output_cov: bool = False,
+            matheron_sampler: bool = False) -> tf.Tensor:
         print('Running sample_SVGP.predict_f_samples.')
-        samples, _, _ = sample_conditional(Xnew, self.inducing_variable, self.kernel, self.q_mu,
-            full_cov=full_cov,
-            full_output_cov=full_output_cov,
-            q_sqrt=self.q_sqrt,
-            white=self.whiten,
-            num_samples=num_samples)
+
+        if matheron_sampler:
+            samples = sample_matheron(self, Xnew, self.inducing_variable, self.kernel)
+        else:
+            samples, _, _ = sample_conditional(Xnew, self.inducing_variable, self.kernel, self.q_mu,
+                full_cov=full_cov,
+                full_output_cov=full_output_cov,
+                q_sqrt=self.q_sqrt,
+                white=self.whiten,
+                num_samples=num_samples)
 
         return samples #[..., (S), N, P]

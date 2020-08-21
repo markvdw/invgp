@@ -39,13 +39,19 @@ sample_SVGP_model = sample_SVGP.sample_SVGP(kernel, likelihood,
                                inducing_variable=inducing_variables,
                                num_data=50,
                                num_latent_gps=10)
+matheron_sample_SVGP_model = sample_SVGP.sample_SVGP(kernel, likelihood,
+                               inducing_variable=inducing_variables,
+                               num_data=50,
+                               num_latent_gps=10,
+                               matheron_sampler=True)
 SVGP_model = SVGP(kernel, likelihood,
                                inducing_variable=inducing_variables,
                                num_data=50,
                                num_latent_gps=10)
 
 # compute samples
+matheron_sample_elbo = matheron_sample_SVGP_model.elbo((X, Y))
 sample_elbo = sample_SVGP_model.elbo((X, Y))
 elbo = SVGP_model.elbo((X, Y))
 
-print(' sample_elbo:', sample_elbo.numpy(), '\n elbo:', elbo.numpy())
+print(' matheron sample elbo:', matheron_sample_elbo, '\nsample_elbo:', sample_elbo.numpy(), '\n elbo:', elbo.numpy())
