@@ -2,11 +2,9 @@ from gpflow.models import SVGP
 from gpflow.models.model import GPModel, InputData, RegressionData, MeanAndVariance
 import numpy as np
 import tensorflow as tf
-from gpflow.conditionals import conditional, sample_conditional
-from gpflow_sampling.samplers import decoupled
+from gpflow.conditionals import sample_conditional
 from invgp.samplers import sample_matheron
 # from invgp.samplers import sampler
-
 
 class sample_SVGP(SVGP):
     def __init__(
@@ -43,18 +41,6 @@ class sample_SVGP(SVGP):
         self._sampler = None
         self.num_samples = num_samples
         self.num_basis = num_basis
-
-    @property
-    def sampler(self) -> decoupled:
-        # Use persistent sampler to avoid repeatedly creating <tf.Variable>
-        if self.matheron_sampler and self._sampler is None:  
-            from gpflow_sampling.samplers import decoupled
-            self._sampler = decoupled(self,
-                                      self.kernel.basekern,
-                                      sample_shape=[self.num_samples],
-                                      num_basis=self.num_basis)
-        return self._sampler
-
 
     def elbo(self, data: RegressionData): 
         """
@@ -100,7 +86,8 @@ class sample_SVGP(SVGP):
         print('Running sample_SVGP.predict_f_samples.')
 
         if matheron_sampler:
-            samples = sample_matheron(self, Xnew, self.inducing_variable, self.kernel)
+            samples = sample_matheron(Xnew, self.inducing_variable, self.kernel, self.q_mu, 
+                                      self.q_sqrt, num_samples = num_samples)
         else:
             samples, _, _ = sample_conditional(Xnew, self.inducing_variable, self.kernel, self.q_mu,
                 full_cov=full_cov,

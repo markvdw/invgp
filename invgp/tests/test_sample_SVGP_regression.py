@@ -1,33 +1,22 @@
 import numpy as np
 import tensorflow as tf
 import gpflow
-import invgp
 import matplotlib.pyplot as plt
 import numpy.random as rnd
-from invgp.inducing_variables.invariant_convolution_domain import StochasticConvolvedInducingPoints
 from invgp.models import sample_SVGP
 from gpflow.models import SVGP
 
 # generate 200 datapoints
-X = np.random.uniform(-3, 3, 400)[:, None]
-X = np.reshape(X, [200, 2]) # 2-dimensional input
-M = np.ones([2, 1]) * 2
-#Y = np.matmul(X, M) # y = 2x_1 + 2x_2
-Y = np.sqrt(X[:, 0]**2 + X[:, 1]**2)[..., np.newaxis]
+X = np.random.uniform(0, 6, 200)[:, None]
+Y = np.sin(2 * X) + 0.1 * np.cos(7 * X) + np.random.randn(*X.shape) * 0.1
 train_dataset = tf.data.Dataset.from_tensor_slices((X, Y))
 train_dataset = train_dataset.shuffle(1024).batch(50)
 
 # initialize SVGP model
 nr_inducing_points = 50
 inducing_variables = X[rnd.permutation(len(X))[:nr_inducing_points], :]
-inducing_variables = StochasticConvolvedInducingPoints(inducing_variables)
-basekernel = gpflow.kernels.SquaredExponential()
-orbit = invgp.kernels.orbits.SwitchXY()
-kernel = invgp.kernels.StochasticInvariant(
-                 basekern=basekernel,
-                 orbit=orbit)
+kernel = gpflow.kernels.SquaredExponential()
 likelihood = gpflow.likelihoods.Gaussian()
-
 SVGP_model = SVGP(kernel, likelihood,
                                inducing_variable=inducing_variables,
                                num_data=200)
@@ -39,39 +28,40 @@ optimizer = tf.keras.optimizers.Adam()
 @tf.function
 def optimization_step():
     optimizer.minimize(training_loss, SVGP_model.trainable_variables)
-for step in range(50):
-   optimization_step()
-   minibatch_elbo = -training_loss().numpy()
-   print('Step: %s, Mini batch elbo: %s' % (step, minibatch_elbo))
+for step in range(5000):
+    optimization_step()
+    minibatch_elbo = -training_loss().numpy()
+    print('Step: %s, Mini batch elbo: %s' % (step, minibatch_elbo))
 
+# visualize data and fitted model
+# test points
+xx = np.linspace(-0.1, 6.1, 100).reshape(100, 1) 
+# predict mean and variance of latent GP at test points
+mean, var = SVGP_model.predict_f(xx)
+# generate 10 samples from posterior
+tf.random.set_seed(1)  # for reproducibility
+samples = SVGP_model.predict_f_samples(xx, 10)  # shape (10, 100, 1)
 
-fig, ax = plt.subplots(1, 2)
-x1list = np.linspace(-3.0, 3.0, 100)
-x2list = np.linspace(-3.0, 3.0, 100)
-X1, X2 = np.meshgrid(x1list, x2list)
-ax[0].set_title('True function')
-ax[0].set_aspect('equal', 'box')
-
-# plot the true data generating process
-true_Z = np.sqrt(X1**2 + X2**2)
-cp = ax[0].contourf(X1, X2, true_Z)
-
-# plot the mean prediction
-positions = np.vstack([X1.ravel(), X2.ravel()])
-mean, var = SVGP_model.predict_f(positions.T)
-cp = ax[1].contourf(X1, X2, np.reshape(mean.numpy().T, X1.shape))
-ax[1].set_title('Posterior mean')
-ax[1].set_aspect('equal', 'box')
-
-fig.colorbar(cp) # Add a colorbar to a plot
+## plot
+plt.figure(figsize=(12, 6))
+plt.plot(X, Y, "kx", mew=2)
+plt.plot(xx, mean, "C0", lw=2)
+plt.fill_between(
+    xx[:, 0],
+    mean[:, 0] - 1.96 * np.sqrt(var[:, 0]),
+    mean[:, 0] + 1.96 * np.sqrt(var[:, 0]),
+    color="C0",
+    alpha=0.2,)
+plt.plot(xx, samples[:, :, 0].numpy().T, "C0", linewidth=0.5)
+_ = plt.xlim(-0.1, 6.1)
 plt.show()
 
 # initialize sample SVGP model with fitted parameters from SVGP
-sample_SVGP_model = sample_SVGP.sample_SVGP(kernel, likelihood,
+sample_SVGP_model = sample_SVGP(kernel, likelihood,
                                inducing_variable=inducing_variables,
                                num_data=200)
-sample_SVGP_model.kernel.basekern.lengthscales.assign(SVGP_model.kernel.basekern.lengthscales.numpy())
-sample_SVGP_model.kernel.basekern.variance.assign(SVGP_model.kernel.basekern.variance.numpy())
+sample_SVGP_model.kernel.lengthscales.assign(SVGP_model.kernel.lengthscales.numpy())
+sample_SVGP_model.kernel.variance.assign(SVGP_model.kernel.variance.numpy())
 sample_SVGP_model.likelihood.variance.assign(SVGP_model.likelihood.variance.numpy())
 sample_SVGP_model.inducing_variable.Z.assign(SVGP_model.inducing_variable.Z)
 sample_SVGP_model.q_mu.assign(SVGP_model.q_mu)
