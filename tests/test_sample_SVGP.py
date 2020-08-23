@@ -54,4 +54,4 @@ matheron_sample_elbo = matheron_sample_SVGP_model.elbo((X, Y))
 sample_elbo = sample_SVGP_model.elbo((X, Y))
 elbo = SVGP_model.elbo((X, Y))
 
-print(' matheron sample elbo:', matheron_sample_elbo, '\nsample_elbo:', sample_elbo.numpy(), '\n elbo:', elbo.numpy())
+print(' matheron sample elbo:', matheron_sample_elbo.numpy(), '\nsample_elbo:', sample_elbo.numpy(), '\n elbo:', elbo.numpy())

@@ -87,7 +87,7 @@ class sample_SVGP(SVGP):
 
         if matheron_sampler:
             samples = sample_matheron(Xnew, self.inducing_variable, self.kernel, self.q_mu, 
-                                      self.q_sqrt, num_samples = num_samples)
+                                      self.q_sqrt, white = self.whiten, num_samples = num_samples)
         else:
             samples, _, _ = sample_conditional(Xnew, self.inducing_variable, self.kernel, self.q_mu,
                 full_cov=full_cov,
