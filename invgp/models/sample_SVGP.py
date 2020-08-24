@@ -36,16 +36,21 @@ class sample_SVGP(SVGP):
           (relevant when feeding in external minibatches)
         """
         # init the super class, accept args
-        super().__init__(kernel, likelihood, inducing_variable, num_latent_gps=num_latent_gps)
+        super().__init__(
+            kernel, likelihood, inducing_variable, num_latent_gps=num_latent_gps,
+            whiten=whiten, num_data=num_data, mean_function=mean_function, q_mu=q_mu,
+            q_sqrt=q_sqrt, q_diag=q_diag)
+
         self.matheron_sampler = matheron_sampler
         self._sampler = None
         self.num_samples = num_samples
+        print('num samples is', self.num_samples)
         self.num_basis = num_basis
 
-    def elbo(self, data: RegressionData): 
+    def elbo(self, data: RegressionData):
         """
         This gives a variational bound (the evidence lower bound or ELBO) on
-        the log marginal likelihood of the model using samples from f. 
+        the log marginal likelihood of the model using samples from f.
 
         """
         X, Y = data # X is [N x D]
@@ -86,7 +91,7 @@ class sample_SVGP(SVGP):
         print('Running sample_SVGP.predict_f_samples.')
 
         if matheron_sampler:
-            samples = sample_matheron(Xnew, self.inducing_variable, self.kernel, self.q_mu, 
+            samples = sample_matheron(Xnew, self.inducing_variable, self.kernel, self.q_mu,
                                       self.q_sqrt, white = self.whiten, num_samples = num_samples)
         else:
             samples, _, _ = sample_conditional(Xnew, self.inducing_variable, self.kernel, self.q_mu,
@@ -97,3 +102,8 @@ class sample_SVGP(SVGP):
                 num_samples=num_samples)
 
         return samples #[..., (S), N, P]
+
+
+    #def maximum_log_likelihood_objective(self, data: RegressionData) -> tf.Tensor:
+    #    print('CALLING THE MAX LOG LIKELIHOOD OBJECTIVE')
+    #    return self.elbo(data)
