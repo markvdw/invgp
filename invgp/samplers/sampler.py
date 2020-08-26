@@ -4,6 +4,8 @@ from invgp.kernels import Invariant
 from gpflow.utilities import Dispatcher
 from gpflow.kernels import Kernel
 from gpflow import kernels, covariances, default_jitter
+from deepkernelinv.kernels import DeepKernel
+# TODO: make deepkernelinv file structure consistent w/ gpflow
 
 sample_matheron = Dispatcher("sample_matheron")
 
@@ -19,8 +21,14 @@ def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True
     samples = tf.reduce_mean(samples, axis = 2) # [S, N, P]
     return samples
 
+@sample_matheron.register(object, object, DeepKernel, object, object)
+def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True, num_samples = 1, num_basis = 1024):
+    Xnew = kernel.cnn(Xnew)
+    samples = sample_matheron(Xnew,  inducing_variable, kernel.basekern, q_mu, q_sqrt, white = white, num_samples=num_samples, num_basis=num_basis)
+    return samples
+
 @sample_matheron.register(object, object, Kernel, object, object)
-def __sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True, num_samples = 1, num_basis = 1024):
+def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True, num_samples = 1, num_basis = 1024):
 
     if not isinstance(kernel, kernels.SquaredExponential):
         raise NotImplementedError
