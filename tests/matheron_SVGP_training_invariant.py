@@ -34,7 +34,7 @@ likelihood = gpflow.likelihoods.Gaussian()
 matheron_sample_SVGP_model = sample_SVGP.sample_SVGP(kernel, likelihood,
                                inducing_variable=inducing_variables,
                                num_data=200,
-                               matheron_sampler=False)
+                               matheron_sampler=True)
 
 # train SVGP model
 train_iter = iter(train_dataset.repeat())
