@@ -7,6 +7,10 @@ import numpy.random as rnd
 from invgp.inducing_variables.invariant_convolution_domain import StochasticConvolvedInducingPoints
 from invgp.models import sample_SVGP
 from gpflow.models import SVGP
+import utils
+
+np.random.seed(0)
+
 
 # generate 200 datapoints
 X = np.random.uniform(-3, 3, 400)[:, None]
@@ -31,21 +35,34 @@ likelihood = gpflow.likelihoods.Gaussian()
 SVGP_model = SVGP(kernel, likelihood,
                                inducing_variable=inducing_variables,
                                num_data=200)
+sample_SVGP_model = sample_SVGP.sample_SVGP(kernel, likelihood,
+                               inducing_variable=inducing_variables,
+                               num_data=200)
+matheron_sample_SVGP_model = sample_SVGP.sample_SVGP(kernel, likelihood,
+                               inducing_variable=inducing_variables,
+                               num_data=200,
+                               matheron_sampler=True)
 
 # train SVGP model
 train_iter = iter(train_dataset.repeat())
 training_loss = SVGP_model.training_loss_closure(train_iter, compile=True)
-optimizer = tf.keras.optimizers.Adam() 
+optimizer = tf.keras.optimizers.Adam()
 @tf.function
 def optimization_step():
     optimizer.minimize(training_loss, SVGP_model.trainable_variables)
-for step in range(50):
+for step in range(10000):
    optimization_step()
    minibatch_elbo = -training_loss().numpy()
    print('Step: %s, Mini batch elbo: %s' % (step, minibatch_elbo))
 
+# initialize sample SVGP model with fitted parameters from SVGP
+utils.initialize_with_trained_params(sample_SVGP_model, SVGP_model)
+utils.initialize_with_trained_params(matheron_sample_SVGP_model, SVGP_model)
+gpflow.utilities.print_summary(SVGP_model)
+gpflow.utilities.print_summary(sample_SVGP_model)
+gpflow.utilities.print_summary(matheron_sample_SVGP_model)
 
-fig, ax = plt.subplots(1, 2)
+fig, ax = plt.subplots(1, 3)
 x1list = np.linspace(-3.0, 3.0, 100)
 x2list = np.linspace(-3.0, 3.0, 100)
 X1, X2 = np.meshgrid(x1list, x2list)
@@ -56,38 +73,42 @@ ax[0].set_aspect('equal', 'box')
 true_Z = np.sqrt(X1**2 + X2**2)
 cp = ax[0].contourf(X1, X2, true_Z)
 
-# plot the mean prediction
+# plot the SVGP mean prediction
 positions = np.vstack([X1.ravel(), X2.ravel()])
 mean, var = SVGP_model.predict_f(positions.T)
 cp = ax[1].contourf(X1, X2, np.reshape(mean.numpy().T, X1.shape))
 ax[1].set_title('Posterior mean')
 ax[1].set_aspect('equal', 'box')
 
+# plot a matheron sample_SVGP sample
+x1list_coarse = np.linspace(-3.0, 3.0, 10)
+x2list_coarse = np.linspace(-3.0, 3.0, 10)
+X1_coarse, X2_coarse = np.meshgrid(x1list_coarse, x2list_coarse)
+positions_coarse = np.vstack([X1_coarse.ravel(), X2_coarse.ravel()])
+samples = matheron_sample_SVGP_model.predict_f_samples(positions_coarse.T, num_samples=1)
+cp = ax[2].contourf(X1_coarse, X2_coarse, np.reshape(samples.numpy().T, X1_coarse.shape))
+ax[2].set_title('f sample from Matheron model')
+ax[2].set_aspect('equal', 'box')
+
 fig.colorbar(cp) # Add a colorbar to a plot
 plt.show()
-
-# initialize sample SVGP model with fitted parameters from SVGP
-sample_SVGP_model = sample_SVGP.sample_SVGP(kernel, likelihood,
-                               inducing_variable=inducing_variables,
-                               num_data=200)
-sample_SVGP_model.kernel.basekern.lengthscales.assign(SVGP_model.kernel.basekern.lengthscales.numpy())
-sample_SVGP_model.kernel.basekern.variance.assign(SVGP_model.kernel.basekern.variance.numpy())
-sample_SVGP_model.likelihood.variance.assign(SVGP_model.likelihood.variance.numpy())
-sample_SVGP_model.inducing_variable.Z.assign(SVGP_model.inducing_variable.Z)
-sample_SVGP_model.q_mu.assign(SVGP_model.q_mu)
-sample_SVGP_model.q_sqrt.assign(SVGP_model.q_sqrt)
-
-gpflow.utilities.print_summary(SVGP_model)
-gpflow.utilities.print_summary(sample_SVGP_model)
 
 #compare elbos
 SVGP_model_elbo = SVGP_model.elbo((X, Y))
 print('SVGP model elbo is:', SVGP_model_elbo.numpy())
 
-
 sample_SVGP_model_elbos = [sample_SVGP_model.elbo((X, Y)) for _ in range(10)]
 expected_sample_elbo = np.mean([elbo.numpy() for elbo in sample_SVGP_model_elbos])
 print('sample_SVGP model elbos:', [elbo.numpy() for elbo in sample_SVGP_model_elbos])
 print('Expectation of the sample ELBO estimator:', expected_sample_elbo)
-
 np.testing.assert_allclose(SVGP_model_elbo, expected_sample_elbo, rtol=1.0, atol=0.0) # the tolerance is picked somewhat randomly
+
+matheron_sample_SVGP_model_elbos = [matheron_sample_SVGP_model.elbo((X, Y)) for _ in range(10)]
+expected_matheron_sample_elbo = np.mean([elbo.numpy() for elbo in matheron_sample_SVGP_model_elbos])
+print('Matheron sample_SVGP model elbos:', [elbo.numpy() for elbo in matheron_sample_SVGP_model_elbos])
+print('Expectation of the Matheron sample ELBO estimator:', expected_matheron_sample_elbo)
+np.testing.assert_allclose(SVGP_model_elbo, expected_matheron_sample_elbo, rtol=1.0, atol=0.0) # the tolerance is picked somewhat randomly
+
+
+
+
