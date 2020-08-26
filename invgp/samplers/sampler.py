@@ -10,9 +10,12 @@ sample_matheron = Dispatcher("sample_matheron")
 @sample_matheron.register(object, object, Invariant, object, object)
 def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True, num_samples = 1, num_basis = 1024):
     X_o = kernel.orbit(Xnew)
-    Xnew = tf.reshape(X_o, [X_o.shape[0]*X_o.shape[1], X_o.shape[2]]) # [NS_o, D]
+    print('X_o shape is ', X_o.shape)
+    Xnew = tf.reshape(X_o, [-1, X_o.shape[2]]) # [NS_o, D]
+    # Xnew = tf.reshape(X_o, [X_o.shape[0]*X_o.shape[1], X_o.shape[2]]) # [NS_o, D]
     samples = sample_matheron(Xnew,  inducing_variable, kernel.basekern, q_mu, q_sqrt, white = white, num_samples=num_samples, num_basis=num_basis)
-    samples = tf.reshape(samples, [num_samples, X_o.shape[0], X_o.shape[1], samples.shape[2]]) # [S, N, C, P]
+    samples = tf.reshape(samples, [num_samples, -1, X_o.shape[1], samples.shape[2]]) # [S, N, C, P]
+    # samples = tf.reshape(samples, [num_samples, X_o.shape[0], X_o.shape[1], samples.shape[2]]) # [S, N, C, P]
     samples = tf.reduce_mean(samples, axis = 2) # [S, N, P]
     return samples
 
