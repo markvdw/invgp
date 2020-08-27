@@ -18,7 +18,7 @@ def test_invariant_model(inducing_variable):
     m = gpflow.models.SGPR((X, Y), kernel, inducing_variable=inducing_variable(Z))
 
     opt = gpflow.optimizers.Scipy()
-    opt.minimize(tf.function(lambda: -m.log_marginal_likelihood()),
+    opt.minimize(tf.function(lambda: -m.elbo()),
                  m.trainable_variables,
                  options=dict(maxiter=1000))
 

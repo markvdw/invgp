@@ -13,7 +13,7 @@ m = gpflow.models.SVGP(invgp.kernels.SwitchDimsInvariant(gpflow.kernels.SquaredE
                        gpflow.inducing_variables.InducingPoints(X))
 
 opt = gpflow.optimizers.Scipy()
-opt_logs = opt.minimize(tf.function(lambda: -m.log_marginal_likelihood((X, Y))),
+opt_logs = opt.minimize(tf.function(lambda: -m.elbo((X, Y))),
                         m.trainable_variables,
                         options=dict(maxiter=1000))
 

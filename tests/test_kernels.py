@@ -63,7 +63,7 @@ def test_unbiased_kernel_estimate(orbit, orbit_kwargs, orbit_minibatch):
     # Check unbiased estimate
     stoch_k.orbit.minibatch_size = orbit_minibatch
     det_K = det_k.K(X)
-    stoch_K_evals = [stoch_k.K(X).numpy() for _ in tqdm(range(200))]
+    stoch_K_evals = [stoch_k.K(X).numpy() for _ in tqdm(range(500))]
     stoch_K = sum(stoch_K_evals) / len(stoch_K_evals)
 
     np.testing.assert_allclose(stoch_K, det_K, rtol=0.01)

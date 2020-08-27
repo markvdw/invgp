@@ -106,7 +106,7 @@ def test_elbo():
     det_m = gpflow.models.SGPR((X, Y), det_k, inducing_variable=det_inducing_variable)
     set_trainable(det_m.inducing_variable, False)
     opt = gpflow.optimizers.Scipy()
-    opt.minimize(tf.function(lambda: -det_m.log_marginal_likelihood()), det_m.trainable_variables,
+    opt.minimize(tf.function(lambda: -det_m.elbo()), det_m.trainable_variables,
                  options=dict(maxiter=1000))
     q_mu, q_var = [_.numpy() for _ in det_m.compute_qu()]
 
@@ -118,10 +118,10 @@ def test_elbo():
     stoch_m.q_mu.assign(q_mu)
     stoch_m.q_sqrt.assign(np.linalg.cholesky(q_var)[None, :, :])
 
-    stoch_m.log_marginal_likelihood((X, Y))
-    fast_lml = tf.function(lambda: stoch_m.log_marginal_likelihood((X, Y)))
-    stoch_lml = np.mean([fast_lml() for _ in tqdm(range(1000))])
-    det_lml = det_m.log_marginal_likelihood()
+    stoch_m.elbo((X, Y))
+    fast_lml = tf.function(lambda: stoch_m.elbo((X, Y)))
+    stoch_lml = np.mean([fast_lml() for _ in tqdm(range(2000))])
+    det_lml = det_m.elbo()
 
     print(stoch_lml)
     print(det_lml)
