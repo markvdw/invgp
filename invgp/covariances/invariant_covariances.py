@@ -30,5 +30,6 @@ def Kuf_stochastic_convip_stochastic_invariant(inducing_variable, kern, Xnew):
     """
     N, M = tf.shape(Xnew)[0], tf.shape(inducing_variable.Z)[0]
     Xorbit = tf.reshape(kern.orbit(Xnew), (N * kern.orbit.minibatch_size, -1))  # [N * minibatch_size, D]
+    # tf.print('shapes: M, N, Xorbit', M, N, Xorbit.shape)
     Kzx = kern.basekern.K(inducing_variable.Z, Xorbit)  # [M, N * minibatch_size]
     return tf.reshape(Kzx, (M, N, kern.orbit.minibatch_size))
