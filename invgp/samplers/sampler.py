@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from invgp.kernels import Invariant
+from invgp.inducing_variables import ConvolvedInducingPoints
 from gpflow.utilities import Dispatcher
 from gpflow.kernels import Kernel
 from gpflow import kernels, covariances, default_jitter
@@ -8,7 +9,7 @@ from gpflow import kernels, covariances, default_jitter
 
 sample_matheron = Dispatcher("sample_matheron")
 
-@sample_matheron.register(object, object, Invariant, object, object)
+@sample_matheron.register(object, ConvolvedInducingPoints, Invariant, object, object)
 def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True, num_samples = 1, num_basis = 1024):
     X_o = kernel.orbit(Xnew)
     Xnew = tf.reshape(X_o, [-1, X_o.shape[2]]) # [NS_o, D]
