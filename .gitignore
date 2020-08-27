@@ -5,3 +5,4 @@ invgp.egg-info/
 htmlcov/
 *.npz
 *.code-workspace
+results/

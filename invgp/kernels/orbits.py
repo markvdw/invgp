@@ -102,17 +102,22 @@ class ImageRotQuant(ImageOrbit):
     """
 
     def __init__(self, rotation_quantisation=45, interpolation_method="NEAREST", input_dim=None, img_size=None,
-                 **kwargs):
+                 use_stn=False, **kwargs):
         super().__init__(int(360 / rotation_quantisation), input_dim=input_dim, img_size=img_size, **kwargs)
+        self.interpolation = interpolation_method if not use_stn else "BILINEAR"
         self.rotation_quantisation = rotation_quantisation
         self.interpolation_method = interpolation_method
         assert 360 % rotation_quantisation == 0, "Orbit must complete in 360 degrees."  # Not strictly necessary
         self.angles = np.arange(0, 360, rotation_quantisation)
+        self.use_stn = use_stn
 
     def orbit_full(self, X):
         img_size = self.img_size(X)
         Ximgs = tf.reshape(X, [-1, img_size, img_size])
-        return rotate_img_angles(Ximgs, self.angles, self.interpolation_method)
+        if self.use_stn:
+            return rotate_img_angles_stn(Ximgs, self.angles)  # STN always uses bilinear interpolation
+        else:
+            return rotate_img_angles(Ximgs, self.angles, self.interpolation)
 
 
 ANGLE_JITTER = 1e0  # minimal value for the angle variable (to be safe when transforming to logistic)
@@ -132,7 +137,6 @@ class ImageRotation(ImageOrbit):
         # Reparameterise angle
         eps = tf.random.uniform([self.minibatch_size], 0., 1., dtype=default_float())
         angles = -self.angle + 2. * self.angle * eps
-
         Ximgs = tf.reshape(X, [-1, self.img_size(X), self.img_size(X)])
         if self.use_stn:
             return rotate_img_angles_stn(Ximgs, angles)  # STN always uses bilinear interpolation
