@@ -4,15 +4,13 @@ from invgp.kernels import Invariant
 from gpflow.utilities import Dispatcher
 from gpflow.kernels import Kernel
 from gpflow import kernels, covariances, default_jitter
-from deepkernelinv.kernels import DeepKernel
-# TODO: make deepkernelinv file structure consistent w/ gpflow
+# from deepkernelinv.kernels import DeepKernel
 
 sample_matheron = Dispatcher("sample_matheron")
 
 @sample_matheron.register(object, object, Invariant, object, object)
 def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True, num_samples = 1, num_basis = 1024):
     X_o = kernel.orbit(Xnew)
-    print('X_o shape is ', X_o.shape)
     Xnew = tf.reshape(X_o, [-1, X_o.shape[2]]) # [NS_o, D]
     # Xnew = tf.reshape(X_o, [X_o.shape[0]*X_o.shape[1], X_o.shape[2]]) # [NS_o, D]
     samples = sample_matheron(Xnew,  inducing_variable, kernel.basekern, q_mu, q_sqrt, white = white, num_samples=num_samples, num_basis=num_basis)
@@ -21,11 +19,11 @@ def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True
     samples = tf.reduce_mean(samples, axis = 2) # [S, N, P]
     return samples
 
-@sample_matheron.register(object, object, DeepKernel, object, object)
-def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True, num_samples = 1, num_basis = 1024):
-    Xnew = kernel.cnn(Xnew)
-    samples = sample_matheron(Xnew,  inducing_variable, kernel.basekern, q_mu, q_sqrt, white = white, num_samples=num_samples, num_basis=num_basis)
-    return samples
+# @sample_matheron.register(object, object, DeepKernel, object, object)
+# def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True, num_samples = 1, num_basis = 1024):
+#     Xnew = kernel.cnn(Xnew)
+#     samples = sample_matheron(Xnew,  inducing_variable, kernel.basekern, q_mu, q_sqrt, white = white, num_samples=num_samples, num_basis=num_basis)
+#     return samples
 
 @sample_matheron.register(object, object, Kernel, object, object)
 def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True, num_samples = 1, num_basis = 1024):
@@ -33,7 +31,6 @@ def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True
     if not isinstance(kernel, kernels.SquaredExponential):
         raise NotImplementedError
 
-    print('Running Matheron sampler.')
     # Draw from prior
     bias = tf.random.uniform(shape = [num_basis], maxval=2*np.pi, dtype = Xnew.dtype)
     spectrum = tf.random.normal(shape = [num_basis, Xnew.shape[1]], dtype = Xnew.dtype)

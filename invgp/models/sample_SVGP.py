@@ -44,7 +44,6 @@ class sample_SVGP(SVGP):
         self.matheron_sampler = matheron_sampler
         self._sampler = None
         self.num_samples = num_samples
-        print('num samples is', self.num_samples)
         self.num_basis = num_basis
 
     def elbo(self, data: RegressionData):
@@ -88,8 +87,6 @@ class sample_SVGP(SVGP):
             full_cov: bool = True,
             full_output_cov: bool = False,
             matheron_sampler: bool = False) -> tf.Tensor:
-        print('Running sample_SVGP.predict_f_samples.')
-
         if matheron_sampler:
             samples = sample_matheron(Xnew, self.inducing_variable, self.kernel, self.q_mu,
                                       self.q_sqrt, white = self.whiten, num_samples = num_samples)
@@ -102,8 +99,3 @@ class sample_SVGP(SVGP):
                 num_samples=num_samples)
 
         return samples #[..., (S), N, P]
-
-
-    #def maximum_log_likelihood_objective(self, data: RegressionData) -> tf.Tensor:
-    #    print('CALLING THE MAX LOG LIKELIHOOD OBJECTIVE')
-    #    return self.elbo(data)
