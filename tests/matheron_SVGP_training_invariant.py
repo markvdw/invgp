@@ -5,7 +5,7 @@ import invgp
 import matplotlib.pyplot as plt
 import numpy.random as rnd
 from invgp.inducing_variables.invariant_convolution_domain import StochasticConvolvedInducingPoints
-from invgp.models import sample_SVGP
+from invgp.models import SampleSVGP
 from gpflow.models import SVGP
 import utils
 
@@ -31,10 +31,10 @@ kernel = invgp.kernels.StochasticInvariant(
                  orbit=orbit)
 likelihood = gpflow.likelihoods.Gaussian()
 
-matheron_sample_SVGP_model = sample_SVGP.sample_SVGP(kernel, likelihood,
-                               inducing_variable=inducing_variables,
-                               num_data=200,
-                               matheron_sampler=True)
+matheron_sample_SVGP_model = SampleSVGP.SampleSVGP(kernel, likelihood,
+                                                   inducing_variable=inducing_variables,
+                                                   num_data=200,
+                                                   matheron_sampler=True)
 
 # train SVGP model
 train_iter = iter(train_dataset.repeat())

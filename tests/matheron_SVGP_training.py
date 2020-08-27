@@ -4,7 +4,7 @@ import gpflow
 import invgp
 import matplotlib.pyplot as plt
 import numpy.random as rnd
-from invgp.models import sample_SVGP
+from invgp.models import SampleSVGP
 from gpflow.models import SVGP
 import utils
 
@@ -21,11 +21,11 @@ nr_inducing_points = 50
 inducing_variables = X[rnd.permutation(len(X))[:nr_inducing_points], :]
 kernel = gpflow.kernels.SquaredExponential()
 likelihood = gpflow.likelihoods.Gaussian()
-matheron_sample_SVGP_model = sample_SVGP.sample_SVGP(kernel, likelihood,
-                               inducing_variable=inducing_variables,
-                               num_data=200,
-                               num_samples=100,
-                               matheron_sampler=True)
+matheron_sample_SVGP_model = SampleSVGP.SampleSVGP(kernel, likelihood,
+                                                   inducing_variable=inducing_variables,
+                                                   num_data=200,
+                                                   num_samples=100,
+                                                   matheron_sampler=True)
 SVGP_model = SVGP(kernel, likelihood,
                               inducing_variable=inducing_variables,
                               num_data=200)

@@ -6,7 +6,7 @@ from gpflow.models.model import InputData, RegressionData
 from invgp.samplers import sample_matheron
 
 
-class sample_SVGP(SVGP):
+class SampleSVGP(SVGP):
     def __init__(
         self,
         kernel,

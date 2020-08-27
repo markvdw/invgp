@@ -5,7 +5,7 @@ import numpy.random as rnd
 import tensorflow as tf
 from gpflow.models import SVGP
 
-from invgp.models.sample_SVGP import sample_SVGP
+from invgp.models.SampleSVGP import SampleSVGP
 from invgp_experiments import utils
 
 np.random.seed(0)
@@ -29,7 +29,7 @@ def test_regression():
             num_data=len(X),
             **kw,
         )
-        for m, kw in [(SVGP, {}), (sample_SVGP, {"matheron_sampler": False}), (sample_SVGP, {"matheron_sampler": True})]
+        for m, kw in [(SVGP, {}), (SampleSVGP, {"matheron_sampler": False}), (SampleSVGP, {"matheron_sampler": True})]
     ]
 
     # train SVGP model
@@ -53,11 +53,11 @@ def test_regression():
     # training data locations**. This is how we get a large variance for the ELBO, which is the strongest test for
     # correctness. To verify this, we plot the 1D model. We also plot the ELBOs over time during training, so we can
     # choose an appropriate training time.
-    import matplotlib.pyplot as plt
+    # import matplotlib.pyplot as plt
     # utils.plot_1d_model(plt.gca(), SVGP_model, data=(X, Y))
     # plt.show()
-    plt.plot(elbo_hist)
-    plt.show()
+    # plt.plot(elbo_hist)
+    # plt.show()
 
     # initialize sample SVGP models with fitted parameters from "regular" SVGP
     trained_params = read_values(SVGP_model)
