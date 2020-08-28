@@ -34,7 +34,7 @@ def test_rot_kernels(orbit):
     # This is not that great a test for ImageRotQuant...
     mnist = tf.keras.datasets.mnist.load_data()[0]
     mnist_X_full = mnist[0].reshape(-1, 28 * 28).astype(gpflow.config.default_float()) / 255.0
-    mnist_Y_full = mnist[1].reshape(-1, 1).astype(gpflow.config.default_int())
+    mnist_Y_full = mnist[1].reshape(-1, 1).astype(gpflow.config.default_float())
 
     rotq_k = invgp.kernels.Invariant(gpflow.kernels.SquaredExponential(), orbit)
     m = gpflow.models.GPR((mnist_X_full[:2, :], mnist_Y_full[:2, :]), rotq_k)
