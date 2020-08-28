@@ -8,7 +8,7 @@ from gpflow.utilities import read_values, multiple_assign, set_trainable
 
 import invgp
 from invgp.inducing_variables.invariant_convolution_domain import StochasticConvolvedInducingPoints
-from invgp.models.sample_SVGP import sample_SVGP
+from invgp.models.SampleSVGP import SampleSVGP
 
 np.random.seed(0)
 
@@ -43,7 +43,7 @@ def test_invariant_regression(inducing_variables_creator):
             num_data=len(X),
             **kw,
         )
-        for m, kw in [(SVGP, {}), (sample_SVGP, {"matheron_sampler": False}), (sample_SVGP, {"matheron_sampler": True})]
+        for m, kw in [(SVGP, {}), (SampleSVGP, {"matheron_sampler": False}), (SampleSVGP, {"matheron_sampler": True})]
     ]
 
     # train SVGP model
