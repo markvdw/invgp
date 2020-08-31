@@ -7,7 +7,7 @@ import tensorflow as tf
 # @sample_conditional.register(object, InducingPoints, InvDeepKernel, object)
 # @sample_conditional.register(object, InducingPoints, DeepKernel, object)
 # seems hacky to dispatch to these just in order to throw an error?
-@sample_conditional.register(object, InducingPoints, Invariant, object)
+@sample_conditional.register(object, ConvolvedInducingPoints, Invariant, object)
 def _sample_conditional(Xnew,
             inducing_variable,
             kernel,

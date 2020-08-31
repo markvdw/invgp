@@ -14,11 +14,7 @@ np.random.seed(0)
 
 
 @pytest.mark.parametrize(
-    "inducing_variables_creator",
-    [
-        lambda X: StochasticConvolvedInducingPoints(X.copy()),
-        # lambda X: X.copy()
-    ],
+    "inducing_variables_creator", [lambda X: StochasticConvolvedInducingPoints(X.copy()), lambda X: X.copy()],
 )
 def test_invariant_regression(inducing_variables_creator):
     # generate datapoints
@@ -81,8 +77,12 @@ def test_invariant_regression(inducing_variables_creator):
         SVGP_model_elbo, expected_sample_elbo, rtol=0.05, atol=0.0
     )  # the tolerance is picked somewhat randomly
 
-    matheron_sample_SVGP_model_elbos = [matheron_sample_SVGP_model.elbo((X, Y)).numpy() for _ in range(10)]
-    expected_matheron_sample_elbo = np.mean(matheron_sample_SVGP_model_elbos)
-    np.testing.assert_allclose(
-        SVGP_model_elbo, expected_matheron_sample_elbo, rtol=0.05, atol=0.0
-    )  # the tolerance is picked somewhat randomly
+    if type(SVGP_model.inducing_variable) is gpflow.inducing_variables.InducingPoints:
+        with pytest.raises(NotImplementedError):
+            matheron_sample_SVGP_model.elbo((X, Y))
+    else:
+        matheron_sample_SVGP_model_elbos = [matheron_sample_SVGP_model.elbo((X, Y)).numpy() for _ in range(10)]
+        expected_matheron_sample_elbo = np.mean(matheron_sample_SVGP_model_elbos)
+        np.testing.assert_allclose(
+            SVGP_model_elbo, expected_matheron_sample_elbo, rtol=0.05, atol=0.0
+        )  # the tolerance is picked somewhat randomly
