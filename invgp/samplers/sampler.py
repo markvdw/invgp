@@ -11,11 +11,7 @@ from deepkernelinv.inducing_variables import KernelSpaceInducingPoints, Convolve
 sample_matheron = Dispatcher("sample_matheron")
 
 @sample_matheron.register(object, ConvolvedInducingPoints, Invariant, object, object)
-# the other dispatchingh is handled now via the double inheritance of the inducing points
-# @sample_matheron.register(object, ConvolvedKernelSpaceInducingPoints, Invariant, object, object)
-# @sample_matheron.register(object, StochasticConvolvedKernelSpaceInducingPoints, Invariant, object, object)
 def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True, num_samples = 1, num_basis = 1024):
-    # print('first function dispatched')
     X_o = kernel.orbit(Xnew)
     Xnew = tf.reshape(X_o, [-1, X_o.shape[2]]) # [NS_o, D]
     # Xnew = tf.reshape(X_o, [X_o.shape[0]*X_o.shape[1], X_o.shape[2]]) # [NS_o, D]
@@ -27,18 +23,13 @@ def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True
 
 
 @sample_matheron.register(object, KernelSpaceInducingPoints, DeepKernel, object, object)
-# @sample_matheron.register(object, ConvolvedKernelSpaceInducingPoints, DeepKernel, object, object)
-# @sample_matheron.register(object, StochasticConvolvedKernelSpaceInducingPoints, DeepKernel, object, object)
 def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True, num_samples = 1, num_basis = 1024):
-    # print('2nd function dispatched')
     samples = sample_matheron(kernel.cnn(Xnew), inducing_variable, kernel.basekern, q_mu, q_sqrt, white = white, num_samples=num_samples, num_basis=num_basis)
     return samples
 
 
 @sample_matheron.register(object, object, Kernel, object, object)
 def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True, num_samples = 1, num_basis = 1024):
-    # print('3rd function dispatched')
-
     if not isinstance(kernel, kernels.SquaredExponential):
         raise NotImplementedError
 
