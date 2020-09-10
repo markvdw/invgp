@@ -101,14 +101,15 @@ class ImageRotQuant(ImageOrbit):
     Kernel invariant to any quantised rotations of the input image.
     """
 
-    def __init__(self, rotation_quantisation=45, interpolation_method="NEAREST", input_dim=None, img_size=None,
+    def __init__(self, rotation_quantisation=45, angle=360, interpolation_method="NEAREST", input_dim=None, img_size=None,
                  use_stn=False, **kwargs):
-        super().__init__(int(360 / rotation_quantisation), input_dim=input_dim, img_size=img_size, **kwargs)
+        super().__init__(int(angle / rotation_quantisation), input_dim=input_dim, img_size=img_size, **kwargs)
         self.interpolation = interpolation_method if not use_stn else "BILINEAR"
+        self.angle = angle
         self.rotation_quantisation = rotation_quantisation
         self.interpolation_method = interpolation_method
-        assert 360 % rotation_quantisation == 0, "Orbit must complete in 360 degrees."  # Not strictly necessary
-        self.angles = np.arange(0, 360, rotation_quantisation)
+        assert self.angle % rotation_quantisation == 0, "Orbit must complete in %s (=self.angle) degrees." % self.angle  # Not strictly necessary
+        self.angles = np.arange(0, self.angle, rotation_quantisation)
         self.use_stn = use_stn
 
     def orbit_full(self, X):
