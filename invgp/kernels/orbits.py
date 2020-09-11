@@ -105,11 +105,10 @@ class ImageRotQuant(ImageOrbit):
                  use_stn=False, **kwargs):
         super().__init__(int(angle / rotation_quantisation), input_dim=input_dim, img_size=img_size, **kwargs)
         self.interpolation = interpolation_method if not use_stn else "BILINEAR"
-        self.angle = angle
+        self.angle = gpflow.Parameter(angle)
         self.rotation_quantisation = rotation_quantisation
         self.interpolation_method = interpolation_method
-        assert self.angle % rotation_quantisation == 0, "Orbit must complete in %s (=self.angle) degrees." % self.angle  # Not strictly necessary
-        self.angles = np.arange(0, self.angle, rotation_quantisation)
+        self.angles = np.arange(0, self.angle.numpy(), rotation_quantisation)
         self.use_stn = use_stn
 
     def orbit_full(self, X):
