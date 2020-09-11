@@ -108,7 +108,6 @@ class ImageRotQuant(ImageOrbit):
         self.angle = angle
         self.rotation_quantisation = rotation_quantisation
         self.interpolation_method = interpolation_method
-        assert self.angle % rotation_quantisation == 0, "Orbit must complete in %s (=self.angle) degrees." % self.angle  # Not strictly necessary
         self.angles = np.arange(0, self.angle, rotation_quantisation)
         self.use_stn = use_stn
 
