@@ -12,8 +12,8 @@ import numpy as np
     orbits.ImageRotation(90, minibatch_size=10, interpolation_method="BILINEAR"),
     orbits.ImageRotation(90, minibatch_size=10, interpolation_method="BILINEAR", use_stn=True),
     orbits.GeneralSpatialTransform(minibatch_size=10),
-   	orbits.ImageRotQuant(10, angle=90, interpolation_method="NEAREST"),
-
+    orbits.ImageRotQuant(10, angle=90, interpolation_method="NEAREST"),
+    orbits.ImageRotQuant(10, angle=5, interpolation_method="NEAREST"),
 ])
 def test_if_orbit_runs(orbit):
     (X, Y), _ = load_mnist()
