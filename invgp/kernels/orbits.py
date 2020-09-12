@@ -101,15 +101,16 @@ class ImageRotQuant(ImageOrbit):
     Kernel invariant to any quantised rotations of the input image.
     """
 
-    def __init__(self, rotation_quantisation=45, angle=360, interpolation_method="NEAREST", input_dim=None, img_size=None,
-                 use_stn=False, **kwargs):
-        super().__init__(int(angle / rotation_quantisation), input_dim=input_dim, img_size=img_size, **kwargs)
+    def __init__(self, orbit_size=90, angle=359, interpolation_method="NEAREST", 
+        input_dim=None, img_size=None, use_stn=False, **kwargs):
+        super().__init__(int(orbit_size), input_dim=input_dim, img_size=img_size, **kwargs)
         self.interpolation = interpolation_method if not use_stn else "BILINEAR"
-        self.angle = gpflow.Parameter(angle)
-        self.rotation_quantisation = rotation_quantisation
+        low_const = tf.constant(0.0, dtype=default_float())
+        high_const = tf.constant(360.0, dtype=default_float())
+        self.angle = gpflow.Parameter(angle, transform=tfb.Sigmoid(low_const, high_const))  
+        # self.angle = gpflow.Parameter(angle)
         self.interpolation_method = interpolation_method
-        self.angles = np.arange(0, self.angle, rotation_quantisation)
-        self.angles = np.arange(0, self.angle.numpy(), rotation_quantisation)
+        self.angles = np.linspace(0, self.angle.numpy(), orbit_size)
         self.use_stn = use_stn
 
     def orbit_full(self, X):
