@@ -51,6 +51,7 @@ def rotate_img_angles_stn(Ximgs, angles):
         )  # [None, H*W]
 
     result = tf.transpose(tf.map_fn(rotate, angles, dtype=Ximgs.dtype), (1, 0, 2))
+
     return tf.cast(result, default_float())  # [None, P, H*W]
 
 
