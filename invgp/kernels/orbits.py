@@ -107,20 +107,19 @@ class ImageRotQuant(ImageOrbit):
         self.interpolation = interpolation_method if not use_stn else "BILINEAR"
         low_const = tf.constant(0.0, dtype=default_float())
         high_const = tf.constant(360.0, dtype=default_float())
-        self.angle = gpflow.Parameter(angle, transform=tfb.Sigmoid(low_const, high_const))  
-        zero = tf.constant(0, default_float())
-        orbit_size = tf.constant(orbit_size, tf.int64)
-        self.angles = tf.linspace(zero, self.angle, orbit_size)
+        self.angle = gpflow.Parameter(angle, transform=tfb.Sigmoid(low_const, high_const), name='angle')  
+        self.orbit_size = orbit_size
         self.use_stn = use_stn
 
     def orbit_full(self, X):
         img_size = self.img_size(X)
         Ximgs = tf.reshape(X, [-1, img_size, img_size])
+        angles = tf.cast(tf.linspace(0., 1., self.orbit_size), default_float()) * self.angle
         if self.use_stn:
-            return rotate_img_angles_stn(Ximgs, self.angles)  # STN always uses bilinear interpolation
+            return rotate_img_angles_stn(Ximgs, angles)  # STN always uses bilinear interpolation
 
         else:
-            return rotate_img_angles(Ximgs, self.angles, self.interpolation)
+            return rotate_img_angles(Ximgs, angles, self.interpolation)
 
 
 ANGLE_JITTER = 1e0  # minimal value for the angle variable (to be safe when transforming to logistic)
