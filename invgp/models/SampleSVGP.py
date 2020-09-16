@@ -5,7 +5,6 @@ from gpflow.models.model import InputData, RegressionData
 
 from invgp.samplers import sample_matheron
 
-
 class SampleSVGP(SVGP):
     def __init__(
         self,
@@ -62,7 +61,7 @@ class SampleSVGP(SVGP):
         X, Y = data  # X is [N x D]
         # initilize some dimensions
         # S_o = X.shape[1]
-        # N = X.shape[0]
+        #N = X.shape[0]
         # D = X.shape[1]
         # P = self.num_latent_gps
 
@@ -73,16 +72,25 @@ class SampleSVGP(SVGP):
             num_samples=self.num_samples,
             full_cov=True,
             full_output_cov=False,
-            matheron_sampler=self.matheron_sampler,
-        )  # [S_f, N, P]
-
+            matheron_sampler=self.matheron_sampler)  # [S_f, N, P]
+        
         # expand Y to the right dimensions
-        Y = tf.expand_dims(Y, 0)  # (1, 50, 10)
-        Y = tf.tile(Y, [self.num_samples, 1, 1])
+        #Y = tf.expand_dims(Y, 0)  # (1, N, P)
+        #Y = tf.tile(Y, [self.num_samples, 1, 1])
         # compute likelihoods
-        likelihoods = self.likelihood.log_prob(f_samples, Y)
+        #likelihoods = self.likelihood.log_prob(f_samples, Y)
         # compute expectations over g
+        #exp_likelihood = tf.reduce_mean(likelihoods, axis=0)  # N
+        
+        #' New
+        #print(Y.shape)
+        Y_ = tf.tile(Y, [self.num_samples,1]) # [S_f*N, P]
+        f_samples = tf.reshape(f_samples, [f_samples.shape[0]*f_samples.shape[1], f_samples.shape[2]]) # [S_f*N, P]
+        #print(f_samples_.shape)
+        likelihoods = self.likelihood.log_prob(f_samples, Y_) # [S_f*N]
+        likelihoods = tf.reshape(likelihoods, [self.num_samples,Y.shape[0]]) # [S_f, N]
         exp_likelihood = tf.reduce_mean(likelihoods, axis=0)  # N
+        #'
 
         if self.num_data is not None:
             num_data = tf.cast(self.num_data, kl.dtype)
