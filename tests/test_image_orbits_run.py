@@ -5,7 +5,6 @@ import pytest
 
 from invgp.kernels import orbits
 from invgp_experiments.datasets import load_mnist
-import numpy as np
 
 
 @pytest.mark.parametrize("orbit", [
@@ -26,6 +25,5 @@ def test_flexible_orbit_size(angle):
     (X, Y), _ = load_mnist()
     orbit = orbits.ImageRotQuant(orbit_size=10, angle=angle, interpolation_method="NEAREST")
     Xo = orbit(X[:1, :])
-    print(orbit.angles)
     orbit_size = Xo.shape[1]
     assert orbit_size == 10
