@@ -101,23 +101,25 @@ class ImageRotQuant(ImageOrbit):
     Kernel invariant to any quantised rotations of the input image.
     """
 
-    def __init__(self, rotation_quantisation=45, interpolation_method="NEAREST", input_dim=None, img_size=None,
-                 use_stn=False, **kwargs):
-        super().__init__(int(360 / rotation_quantisation), input_dim=input_dim, img_size=img_size, **kwargs)
+    def __init__(self, orbit_size=90, angle=359.0, interpolation_method="NEAREST", 
+        input_dim=None, img_size=None, use_stn=False, **kwargs):
+        super().__init__(int(orbit_size), input_dim=input_dim, img_size=img_size, **kwargs)
         self.interpolation = interpolation_method if not use_stn else "BILINEAR"
-        self.rotation_quantisation = rotation_quantisation
-        self.interpolation_method = interpolation_method
-        assert 360 % rotation_quantisation == 0, "Orbit must complete in 360 degrees."  # Not strictly necessary
-        self.angles = np.arange(0, 360, rotation_quantisation)
+        low_const = tf.constant(0.0, dtype=default_float())
+        high_const = tf.constant(360.0, dtype=default_float())
+        self.angle = gpflow.Parameter(angle, transform=tfb.Sigmoid(low_const, high_const), name='angle')  
+        self.orbit_size = orbit_size
         self.use_stn = use_stn
 
     def orbit_full(self, X):
         img_size = self.img_size(X)
         Ximgs = tf.reshape(X, [-1, img_size, img_size])
+        angles = tf.cast(tf.linspace(0., 1., self.orbit_size), default_float()) * self.angle
         if self.use_stn:
-            return rotate_img_angles_stn(Ximgs, self.angles)  # STN always uses bilinear interpolation
+            return rotate_img_angles_stn(Ximgs, angles)  # STN always uses bilinear interpolation
+
         else:
-            return rotate_img_angles(Ximgs, self.angles, self.interpolation)
+            return rotate_img_angles(Ximgs, angles, self.interpolation)
 
 
 ANGLE_JITTER = 1e0  # minimal value for the angle variable (to be safe when transforming to logistic)
