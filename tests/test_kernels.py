@@ -45,7 +45,7 @@ def test_inducing_variables_psd_schur(input_dim, inducing_variable, kernel):
 
 @pytest.mark.parametrize("orbit, orbit_kwargs, orbit_minibatch", [
     # (orbits.ImageRot90, {}, 2),  # Requires many samples for orbit_minibatch of 2
-    (orbits.ImageRotQuant, dict(interpolation_method="BILINEAR"), 6)
+    (orbits.ImageRotQuant, dict(interpolation_method="BILINEAR"), 90)
 ])
 def test_unbiased_kernel_estimate(orbit, orbit_kwargs, orbit_minibatch):
     det_k = Invariant(gpflow.kernels.SquaredExponential(lengthscales=5), orbit(**orbit_kwargs))
