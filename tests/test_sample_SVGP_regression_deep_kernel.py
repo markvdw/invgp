@@ -54,14 +54,7 @@ def cnn():
     return cnn
 
 def deepkernel():
-    deepkernel = DeepKernel((2, 1),
-                    filters_l1=0,
-                    filters_l2=0,
-                    hidden_units=0,
-                    output_units=2,
-                    basekern=gpflow.kernels.SquaredExponential(),
-                    batch_size=200,
-                    cnn=cnn())
+    deepkernel = DeepKernel(cnn(), (2, 1), gpflow.kernels.SquaredExponential())
     return deepkernel
  
 def invariant_base_rbf():
@@ -167,18 +160,9 @@ def test_dimred_deep_kernel():
         tf.keras.layers.Dense(8, activation='relu'),
         tf.keras.layers.Dense(1, activation=None),
         tf.keras.layers.Lambda(lambda x: tf.cast(x, default_float()))])
-
-    deepkernel = DeepKernel((2, 1),
-                    filters_l1=0,
-                    filters_l2=0,
-                    hidden_units=0,
-                    output_units=2,
-                    basekern=gpflow.kernels.SquaredExponential(),
-                    batch_size=200,
-                    cnn=cnn)
+    deepkernel = DeepKernel(cnn, (2, 1), gpflow.kernels.SquaredExponential())
 
     inducing_variables = KernelSpaceInducingPoints(deepkernel.cnn(X.copy()))
-
 
     deepkernel_sample_SVGP_model = SampleSVGP(
             deepkernel,
@@ -188,4 +172,4 @@ def test_dimred_deep_kernel():
             matheron_sampler=True)
 
     untrained_deepkernel_elbos = [deepkernel_sample_SVGP_model.elbo((X, Y)).numpy() for _ in range(100)]
-    print("Untrained elbo (mean of samples):", untrained_deepkernel_elbos.mean())
+    print("Untrained elbo (mean of samples):", np.mean(untrained_deepkernel_elbos))

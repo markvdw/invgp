@@ -29,7 +29,7 @@ def test_invariant_model(inducing_variable):
 
 
 @pytest.mark.parametrize("orbit", [invgp.kernels.orbits.ImageRot90(),
-                                   invgp.kernels.orbits.ImageRotQuant(90, interpolation_method="BILINEAR")])
+                                   invgp.kernels.orbits.ImageRotQuant(4, angle=359.999, interpolation_method="BILINEAR")])
 def test_rot_kernels(orbit):
     # This is not that great a test for ImageRotQuant...
     mnist = tf.keras.datasets.mnist.load_data()[0]
