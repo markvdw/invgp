@@ -112,8 +112,8 @@ def test_identity_deep_kernel(kern, indp):
     ]
 
     # check that untrained sample ELBOs are the same
-    untrained_elbos = [sample_SVGP_model.elbo((X, Y)).numpy() for _ in range(100)]
-    untrained_deepkernel_elbos = [deepkernel_sample_SVGP_model.elbo((X, Y)).numpy() for _ in range(100)]
+    untrained_elbos = [sample_SVGP_model.elbo((X, Y)).numpy() for _ in range(500)]
+    untrained_deepkernel_elbos = [deepkernel_sample_SVGP_model.elbo((X, Y)).numpy() for _ in range(500)]
     print("""Untrained elbo (mean of samples): %s, \n Untrained deepkernel elbo (mean): %s"""
         %(np.mean(untrained_elbos), np.mean(untrained_deepkernel_elbos)))
     np.testing.assert_allclose(np.mean(untrained_elbos), np.mean(untrained_deepkernel_elbos), rtol=0.05, atol=0.0)
@@ -145,8 +145,8 @@ def test_identity_deep_kernel(kern, indp):
     gpflow.utilities.print_summary(deepkernel_sample_SVGP_model)
 
     # check that untrained sample ELBOs are the same
-    trained_elbos = [sample_SVGP_model.elbo((X, Y)).numpy() for _ in range(100)]
-    trained_deepkernel_elbos = [deepkernel_sample_SVGP_model.elbo((X, Y)).numpy() for _ in range(100)]
+    trained_elbos = [sample_SVGP_model.elbo((X, Y)).numpy() for _ in range(500)]
+    trained_deepkernel_elbos = [deepkernel_sample_SVGP_model.elbo((X, Y)).numpy() for _ in range(500)]
     print("""Trained elbo (mean of samples): %s, \n Trained deepkernel elbo (mean): %s"""
         %(np.mean(trained_elbos), np.mean(trained_deepkernel_elbos)))
     np.testing.assert_allclose(np.mean(trained_elbos), np.mean(trained_deepkernel_elbos), rtol=0.05, atol=0.0)
@@ -171,5 +171,5 @@ def test_dimred_deep_kernel():
             num_data=len(X),
             matheron_sampler=True)
 
-    untrained_deepkernel_elbos = [deepkernel_sample_SVGP_model.elbo((X, Y)).numpy() for _ in range(100)]
+    untrained_deepkernel_elbos = [deepkernel_sample_SVGP_model.elbo((X, Y)).numpy() for _ in range(500)]
     print("Untrained elbo (mean of samples):", np.mean(untrained_deepkernel_elbos))

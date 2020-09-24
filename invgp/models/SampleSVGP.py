@@ -70,9 +70,9 @@ class SampleSVGP(SVGP):
             matheron_sampler=self.matheron_sampler)  # [S_f, N, P]
 
         Y_ = tf.tile(Y, [self.num_samples, 1]) # [S_f*N, P]
-        f_samples = tf.reshape(f_samples, [f_samples.shape[0]*f_samples.shape[1], f_samples.shape[2]])  # [S_f*N, P]
+        f_samples = tf.reshape(f_samples, [-1, f_samples.shape[2]])  # [S_f*N, P]
         likelihoods = self.likelihood.log_prob(f_samples, Y_)  # [S_f*N]
-        likelihoods = tf.reshape(likelihoods, [self.num_samples, Y.shape[0]])  # [S_f, N]
+        likelihoods = tf.reshape(likelihoods, [self.num_samples, -1])  # [S_f, N]
         exp_likelihood = tf.reduce_mean(likelihoods, axis=0)  # N
 
         if self.num_data is not None:
