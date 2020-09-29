@@ -5,10 +5,9 @@ from invgp.inducing_variables import ConvolvedInducingPoints
 from gpflow.utilities import Dispatcher
 from gpflow.kernels import Kernel
 from gpflow import kernels, covariances, default_jitter
-from deepkernelinv.kernels import DeepKernel
-from deepkernelinv.inducing_variables import KernelSpaceInducingPoints, ConvolvedKernelSpaceInducingPoints, StochasticConvolvedKernelSpaceInducingPoints
 
 sample_matheron = Dispatcher("sample_matheron")
+
 
 @sample_matheron.register(object, ConvolvedInducingPoints, Invariant, object, object)
 def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True, num_samples = 1, num_basis = 512):
@@ -19,12 +18,6 @@ def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True
     samples = tf.reshape(samples, [num_samples, -1, X_o.shape[1], samples.shape[2]]) # [S, N, C, P]
     # samples = tf.reshape(samples, [num_samples, X_o.shape[0], X_o.shape[1], samples.shape[2]]) # [S, N, C, P]
     samples = tf.reduce_mean(samples, axis = 2) # [S, N, P]
-    return samples
-
-
-@sample_matheron.register(object, KernelSpaceInducingPoints, DeepKernel, object, object)
-def _sample_matheron(Xnew, inducing_variable, kernel, q_mu, q_sqrt, white = True, num_samples = 1, num_basis = 512):
-    samples = sample_matheron(kernel.cnn(Xnew), inducing_variable, kernel.basekern, q_mu, q_sqrt, white = white, num_samples=num_samples, num_basis=num_basis)
     return samples
 
 
