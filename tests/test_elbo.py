@@ -54,7 +54,7 @@ def Kuu_temp(inducing_variable, kernel, *, jitter=0.0):
     print("Kuu_temp")
     X_scaled = inducing_variable.Z / kernel.base_lengthscales
     r2 = square_distance(X_scaled, None)
-    return kernel.base_variance * tf.exp(-0.5 * r2) + jitter * tf.eye(len(inducing_variable), dtype=r2.dtype)
+    return kernel.base_variance * tf.exp(-0.5 * r2) + jitter * tf.eye(inducing_variable.Z.shape[0], dtype=r2.dtype)
 
 
 @Kuf.register(GaussianNoiseInvariantInducing, GaussianNoiseInvariant, object)
