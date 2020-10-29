@@ -9,7 +9,7 @@ from ..kernels import Invariant, StochasticInvariant
 @Kuu.register(ConvolvedInducingPoints, Invariant)
 def Kuu_convip_invariant(inducing_variable: ConvolvedInducingPoints, kernel: Invariant, *, jitter=0.0):
     Kzz = kernel.basekern.K(inducing_variable.Z)
-    Kzz += jitter * tf.eye(inducing_variable.Z.shape[0], dtype=Kzz.dtype)
+    Kzz += jitter * tf.eye(inducing_variable.num_inducing, dtype=Kzz.dtype)
     return Kzz
 
 
