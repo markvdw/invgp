@@ -155,7 +155,7 @@ class GeneralSpatialTransform(ImageOrbit):
 
     def __init__(self, theta_min=np.array([1., 0., 0., 0., 1., 0.]),
                  theta_max=np.array([1., 0., 0., 0., 1., 0.]), constrain=False, input_dim=None, img_size=None,
-                 minibatch_size=10, **kwargs):
+                 minibatch_size=10, initialization=0., **kwargs):
         """
         :param theta_min: one end of the range; identity = [1, 0, 0, 0, 1, 0]
         :param theta_max: other end of the range; identity = [1, 0, 0, 0, 1, 0]
@@ -180,6 +180,10 @@ class GeneralSpatialTransform(ImageOrbit):
         else:
             self.theta_min = gpflow.Parameter(theta_min, dtype=default_float())
             self.theta_max = gpflow.Parameter(theta_max, dtype=default_float())
+
+        # initialize with a small eps away from identity
+        self.theta_min = self.theta_min - initialization
+        self.theta_max = self.theta_max + initialization
 
     def orbit_minibatch(self, X):
         eps = tf.random.uniform([self.minibatch_size, 6], 0., 1., dtype=default_float())
