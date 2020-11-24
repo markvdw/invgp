@@ -178,12 +178,8 @@ class GeneralSpatialTransform(ImageOrbit):
             self.theta_max_4 = gpflow.Parameter(theta_min[4], dtype=default_float(), transform=positive(lower=1.))
             self.theta_max_5 = gpflow.Parameter(theta_min[5], dtype=default_float(), transform=positive())
         else:
-            self.theta_min = gpflow.Parameter(theta_min, dtype=default_float())
-            self.theta_max = gpflow.Parameter(theta_max, dtype=default_float())
-
-        # initialize with a small eps away from identity
-        self.theta_min = self.theta_min - initialization
-        self.theta_max = self.theta_max + initialization
+            self.theta_min = gpflow.Parameter(theta_min - initialization, dtype=default_float())
+            self.theta_max = gpflow.Parameter(theta_max + initialization, dtype=default_float())
 
     def orbit_minibatch(self, X):
         eps = tf.random.uniform([self.minibatch_size, 6], 0., 1., dtype=default_float())
