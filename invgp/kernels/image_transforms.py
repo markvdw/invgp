@@ -54,10 +54,10 @@ def rotate_img_angles_stn(Ximgs, angles):
     return tf.cast(result, default_float())  # [None, P, H*W]
 
 
-def _stn_theta_vec(thetas):
+def _stn_theta_vec(thetas, radians=False):
     """
     Compute 6-parameter theta vector from physical components
-    :param angle_deg: rotation angle
+    :param angle_deg: rotation angle/radians
     :param sx: scale in x direction
     :param sy: scale in y direction
     :param tx: shear in x direction
@@ -70,7 +70,8 @@ def _stn_theta_vec(thetas):
     tx = thetas[3]
     ty = thetas[4]
 
-    angle_rad = tf.cast(thetas[0] / 180 * np.pi, default_float())
+    if not radians:  # convert angle to radians if it's not already 
+        angle_rad = tf.cast(thetas[0] / 180 * np.pi, default_float())
     s = tf.sin(angle_rad)
     c = tf.cos(angle_rad)
 

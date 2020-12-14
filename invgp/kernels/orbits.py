@@ -148,7 +148,7 @@ class ImageRotation(ImageOrbit):
 
 class GeneralSpatialTransform(ImageOrbit):
     """
-    Kernel invariant to to transformations using Spatial Transformer Networks (STNs); this correponds to six-parameter
+    Kernel invariant to transformations using Spatial Transformer Networks (STNs); this correponds to six-parameter
     affine transformations.
     This version of the kernel is parameterised by the six independent parameters directly (thus "_general")
     """
@@ -209,10 +209,10 @@ class InterpretableSpatialTransform(ImageOrbit):
 
     def __init__(self, theta_min=np.array([0., 1., 1., 0., 0.]),
                  theta_max=np.array([0., 1., 1., 0., 0.]), constrain=False, input_dim=None, img_size=None,
-                 minibatch_size=10, **kwargs):
+                 minibatch_size=10, radians=False, **kwargs):
         """
-        :param theta_min: one end of the range; identity = [1, 0, 0, 0, 1, 0]
-        :param theta_max: other end of the range; identity = [1, 0, 0, 0, 1, 0]
+        :param theta_min: one end of the range
+        :param theta_max: other end of the range
         :param constrain: whether theta_min is always below the identity and theta_max always above
         """
         super().__init__(np.inf, input_dim=input_dim, img_size=img_size, minibatch_size=minibatch_size, **kwargs)
