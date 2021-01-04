@@ -217,6 +217,7 @@ class InterpretableSpatialTransform(ImageOrbit):
         """
         super().__init__(np.inf, input_dim=input_dim, img_size=img_size, minibatch_size=minibatch_size, **kwargs)
         self.constrain = constrain
+        self.radians = radians
         if constrain:
             raise NotImplementedError   # we might want to implement this at some point
         else:
@@ -229,7 +230,7 @@ class InterpretableSpatialTransform(ImageOrbit):
         theta_min = tf.reshape(self.theta_min, [1, -1])
         theta_max = tf.reshape(self.theta_max, [1, -1])
         thetas = theta_min + (theta_max - theta_min) * eps
-        stn_thetas = tf.map_fn(lambda thetas: _stn_theta_vec(thetas), thetas)
+        stn_thetas = tf.map_fn(lambda thetas: _stn_theta_vec(thetas, radians=self.radians), thetas)
 
         Ximgs = tf.reshape(X, [-1, self.img_size(X), self.img_size(X)])
 
