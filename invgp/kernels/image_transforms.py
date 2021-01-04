@@ -70,7 +70,9 @@ def _stn_theta_vec(thetas, radians=False):
     tx = thetas[3]
     ty = thetas[4]
 
-    if not radians:  # convert angle to radians if it's not already 
+    if radians:
+        angle_rad = thetas[0]
+    else:  # convert angle to radians if it's not already 
         angle_rad = tf.cast(thetas[0] / 180 * np.pi, default_float())
     s = tf.sin(angle_rad)
     c = tf.cos(angle_rad)
