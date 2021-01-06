@@ -235,3 +235,58 @@ class InterpretableSpatialTransform(ImageOrbit):
         Ximgs = tf.reshape(X, [-1, self.img_size(X), self.img_size(X)])
 
         return apply_stn_batch(Ximgs, stn_thetas)
+
+
+class BrightnessTransform(ImageOrbit):
+    """
+    Differetiable brightness adjustment
+    """
+
+    def __init__(self, input_dim=None, img_size=None,
+                 minibatch_size=10, log_lims=[-2., 2], **kwargs):
+        """
+        """
+        super().__init__(np.inf, input_dim=input_dim, img_size=img_size, minibatch_size=minibatch_size, **kwargs)
+        self.log_lims = gpflow.Parameter(log_lims, dtype=default_float())
+
+    @property
+    def lims(self):
+        return tf.math.sigmoid(self.log_lims) * 2 - 1
+
+    def orbit_minibatch(self, X):
+        # TODO: does this already work for three color channels?
+        # expand X across orbit_size dim.
+        X_orbit = tf.tile(np.expand_dims(X, 1), [1, self.minibatch_size, 1])
+        # sample brightness change via reparam. trick
+        eps = tf.random.uniform([1, self.minibatch_size, 1], 0., 1., dtype=default_float())
+        brightness_change = eps * (self.lims[1] - self.lims[0]) + self.lims[0]
+        # expand brightness_change across batch size, sth. we apply the same trafo to each img in batch
+        brightness_change = tf.tile(brightness_change, [X.shape[0], 1, self.input_dim(X)])
+        # add brightness change and clip values to [0, 1]
+        X_orbit = tf.clip_by_value(X_orbit + brightness_change, 0, 1)
+        return X_orbit
+
+
+class ContrastTransform(ImageOrbit):
+    """
+    Differetiable contrast adjustment
+    """
+    def __init__(self, input_dim=None, img_size=None,
+                 minibatch_size=10, log_lims=[-2., 2], **kwargs):
+        super().__init__(np.inf, input_dim=input_dim, img_size=img_size, minibatch_size=minibatch_size, **kwargs)
+        self.log_lims = gpflow.Parameter(log_lims, dtype=default_float())
+
+    @property
+    def lims(self):
+        return tf.math.sigmoid(self.log_lims) * 2 - 1
+
+    def orbit_minibatch(self, X):
+        X_orbit = tf.tile(np.expand_dims(X, 1), [1, self.minibatch_size, 1])
+
+        eps = tf.random.uniform([1, self.minibatch_size, 1], 0., 1., dtype=default_float())
+        contrast_change = eps * (self.lims[1] - self.lims[0]) + self.lims[0]
+        contrast_change = contrast_change * 255
+        contrast_change = tf.tile(contrast_change, [X.shape[0], 1, self.input_dim(X)])
+        factor = (259 * (contrast_change + 255)) / (255 * (259 - contrast_change))
+        X_orbit = tf.clip_by_value(factor * (X_orbit * 255 - 128) + 128, 0, 255) / 255
+        return X_orbit
