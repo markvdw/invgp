@@ -15,6 +15,7 @@ from invgp_experiments.datasets import load_mnist
     orbits.InterpretableSpatialTransform(minibatch_size=10),
     orbits.ImageRotQuant(orbit_size=10, angle=90, interpolation_method="NEAREST"),
     orbits.ImageRotQuant(orbit_size=10, angle=5, interpolation_method="NEAREST"),
+    orbits.ColorTransform(minibatch_size=10, log_lims_contrast=[-1., 1.], log_lims_brightness=[-1., 1.])
 ])
 def test_if_orbit_runs(orbit):
     (X, Y), _ = load_mnist()
