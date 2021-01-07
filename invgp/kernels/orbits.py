@@ -243,7 +243,7 @@ class ColorTransform(ImageOrbit):
     """
 
     def __init__(self, input_dim=None, img_size=None,
-                 minibatch_size=10, log_lims_contrast=[-2., 2.], log_lims_brightness=[-2., 2], **kwargs):
+                 minibatch_size=10, log_lims_contrast=[-2., 2.], log_lims_brightness=[-2., 2.], **kwargs):
         """
         :param log_lims_contrast: lower and upper end of range for contrast, logit
         :param log_lims_contrast: lower and upper end of range for contrast, logit
@@ -268,18 +268,15 @@ class ColorTransform(ImageOrbit):
         # sample contrast_change via reparam. trick
         eps = tf.random.uniform([1, self.minibatch_size, 1], 0., 1., dtype=default_float())
         contrast_change = eps * (self.lims_contrast[1] - self.lims_contrast[0]) + self.lims_contrast[0]
-        contrast_change = contrast_change * 255
-        # expand contrast_change across batch size, sth. we apply the same trafo to each img in batch
-        contrast_change = tf.tile(contrast_change, [X.shape[0], 1, self.input_dim(X)])
-        factor = (259 * (contrast_change + 255)) / (255 * (259 - contrast_change))
+        contrast_change = contrast_change * 255.
+        factor = (259. * (contrast_change + 255.)) / (255.* (259. - contrast_change))
         # apply contrast_change and clip values to [0, 1]
-        X_orbit = tf.clip_by_value(factor * (X_orbit * 255 - 128) + 128, 0, 255) / 255
+        X_orbit = tf.clip_by_value(factor * (X_orbit * 255. - 128.) + 128., 0., 255.) / 255.
 
         # then apply brightness transform
         eps = tf.random.uniform([1, self.minibatch_size, 1], 0., 1., dtype=default_float())
         brightness_change = eps * (self.lims_brightness[1] - self.lims_brightness[0]) + self.lims_brightness[0]
-        brightness_change = tf.tile(brightness_change, [X.shape[0], 1, self.input_dim(X)])
-        X_orbit = tf.clip_by_value(X_orbit + brightness_change, 0, 1)
+        X_orbit = tf.clip_by_value(X_orbit + brightness_change, 0., 1.)
 
         return X_orbit
 
