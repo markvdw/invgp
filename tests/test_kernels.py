@@ -1,9 +1,10 @@
+import gpflow
 import numpy as np
 import pytest
+import tensorflow as tf
+from gpflow.config import default_jitter
 from tqdm import tqdm
 
-import gpflow
-from gpflow.config import default_jitter
 from invgp.covariances import Kuu, Kuf
 from invgp.inducing_variables import ConvolvedInducingPoints
 from invgp.kernels import Invariant, StochasticInvariant, orbits
@@ -45,7 +46,7 @@ def test_inducing_variables_psd_schur(input_dim, inducing_variable, kernel):
 
 @pytest.mark.parametrize("orbit, orbit_kwargs, orbit_minibatch", [
     # (orbits.ImageRot90, {}, 2),  # Requires many samples for orbit_minibatch of 2
-    (orbits.ImageRotQuant, dict(interpolation_method="BILINEAR"), 90)
+    (orbits.ImageRotQuant, dict(interpolation_method="BILINEAR", orbit_size=8), 5)
 ])
 def test_unbiased_kernel_estimate(orbit, orbit_kwargs, orbit_minibatch):
     det_k = Invariant(gpflow.kernels.SquaredExponential(lengthscales=5), orbit(**orbit_kwargs))
@@ -63,13 +64,15 @@ def test_unbiased_kernel_estimate(orbit, orbit_kwargs, orbit_minibatch):
     # Check unbiased estimate
     stoch_k.orbit.minibatch_size = orbit_minibatch
     det_K = det_k.K(X)
-    stoch_K_evals = [stoch_k.K(X).numpy() for _ in tqdm(range(500))]
+    compiled_sK = tf.function(lambda X: stoch_k.K(X))
+    stoch_K_evals = [compiled_sK(X).numpy() for _ in tqdm(range(500))]
     stoch_K = sum(stoch_K_evals) / len(stoch_K_evals)
 
     np.testing.assert_allclose(stoch_K, det_K, rtol=0.01)
 
     # Check diagonal
-    stoch_K_evals = [stoch_k.K_diag(X).numpy() for _ in tqdm(range(200))]
+    compiled_sK_diag = tf.function(lambda X: stoch_k.K_diag(X))
+    stoch_K_evals = [compiled_sK_diag(X).numpy() for _ in tqdm(range(200))]
     stoch_K = sum(stoch_K_evals) / len(stoch_K_evals)
 
     np.testing.assert_allclose(stoch_K, np.diag(det_K), rtol=0.01, atol=1e-3)
@@ -86,7 +89,8 @@ def test_infinite_orbit_unbiased_kernel_estimate():
     X2 = np.random.randn(2, 1)
 
     repeats = 500
-    stoch_K = sum([k.K(X1, X2) for _ in tqdm(range(repeats))]) / repeats
+    compiled_K = tf.function(lambda X1, X2: k.K(X1, X2))
+    stoch_K = sum([compiled_K(X1, X2) for _ in tqdm(range(repeats))]) / repeats
     comp_K = comp_k.K(X1, X2)
 
     np.testing.assert_allclose(stoch_K, comp_K, rtol=0.01, atol=1e-3)
