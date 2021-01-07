@@ -11,7 +11,8 @@ from invgp_experiments.datasets import load_mnist
     orbits.ImageRotation(90, minibatch_size=10, interpolation_method="NEAREST"),
     orbits.ImageRotation(90, minibatch_size=10, interpolation_method="BILINEAR"),
     orbits.ImageRotation(90, minibatch_size=10, interpolation_method="BILINEAR", use_stn=True),
-    orbits.GeneralSpatialTransform(minibatch_size=10),
+    orbits.GeneralSpatialTransform(minibatch_size=10, initialization=0.02),
+    orbits.InterpretableSpatialTransform(minibatch_size=10),
     orbits.ImageRotQuant(orbit_size=10, angle=90, interpolation_method="NEAREST"),
     orbits.ImageRotQuant(orbit_size=10, angle=5, interpolation_method="NEAREST"),
 ])

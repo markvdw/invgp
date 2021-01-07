@@ -5,7 +5,7 @@ from tensorflow_probability import bijectors as tfb
 import gpflow
 from gpflow.config import default_float
 from gpflow.utilities.bijectors import positive
-from .image_transforms import rotate_img_angles, rotate_img_angles_stn, apply_stn_batch
+from .image_transforms import rotate_img_angles, rotate_img_angles_stn, apply_stn_batch, _stn_theta_vec
 
 
 class Orbit(gpflow.base.Module):
@@ -55,7 +55,8 @@ class ImageOrbit(Orbit):
     def __init__(self, orbit_size, input_dim=None, img_size=None, minibatch_size=None, **kwargs):
         super().__init__(orbit_size, minibatch_size=minibatch_size, **kwargs)
         if input_dim is not None and img_size is None:
-            img_size = int(input_dim ** 0.5)
+            print('img dim is', input_dim)
+            img_size = int(tf.cast(input_dim, default_float()) ** 0.5)
         elif input_dim is None and img_size is not None:
             input_dim = img_size ** 2
         elif input_dim is not None and img_size is not None:
@@ -147,14 +148,14 @@ class ImageRotation(ImageOrbit):
 
 class GeneralSpatialTransform(ImageOrbit):
     """
-    Kernel invariant to to transformations using Spatial Transformer Networks (STNs); this correponds to six-parameter
+    Kernel invariant to transformations using Spatial Transformer Networks (STNs); this correponds to six-parameter
     affine transformations.
     This version of the kernel is parameterised by the six independent parameters directly (thus "_general")
     """
 
     def __init__(self, theta_min=np.array([1., 0., 0., 0., 1., 0.]),
                  theta_max=np.array([1., 0., 0., 0., 1., 0.]), constrain=False, input_dim=None, img_size=None,
-                 minibatch_size=10, **kwargs):
+                 minibatch_size=10, initialization=0., **kwargs):
         """
         :param theta_min: one end of the range; identity = [1, 0, 0, 0, 1, 0]
         :param theta_max: other end of the range; identity = [1, 0, 0, 0, 1, 0]
@@ -177,8 +178,8 @@ class GeneralSpatialTransform(ImageOrbit):
             self.theta_max_4 = gpflow.Parameter(theta_min[4], dtype=default_float(), transform=positive(lower=1.))
             self.theta_max_5 = gpflow.Parameter(theta_min[5], dtype=default_float(), transform=positive())
         else:
-            self.theta_min = gpflow.Parameter(theta_min, dtype=default_float())
-            self.theta_max = gpflow.Parameter(theta_max, dtype=default_float())
+            self.theta_min = gpflow.Parameter(theta_min - initialization, dtype=default_float())
+            self.theta_max = gpflow.Parameter(theta_max + initialization, dtype=default_float())
 
     def orbit_minibatch(self, X):
         eps = tf.random.uniform([self.minibatch_size, 6], 0., 1., dtype=default_float())
@@ -197,3 +198,40 @@ class GeneralSpatialTransform(ImageOrbit):
         Ximgs = tf.reshape(X, [-1, self.img_size(X), self.img_size(X)])
 
         return apply_stn_batch(Ximgs, thetas)
+
+
+class InterpretableSpatialTransform(ImageOrbit):
+    """
+    Kernel invariant to to transformations using Spatial Transformer Networks (STNs); this correponds to six-parameter
+    affine transformations.
+    This version of the kernel is parameterised by physical components rotation angle, scale in x/y direction, shear in x/y direction: [angle_deg, sx, sy, tx, ty].
+    """
+
+    def __init__(self, theta_min=np.array([0., 1., 1., 0., 0.]),
+                 theta_max=np.array([0., 1., 1., 0., 0.]), constrain=False, input_dim=None, img_size=None,
+                 minibatch_size=10, radians=False, **kwargs):
+        """
+        :param theta_min: one end of the range
+        :param theta_max: other end of the range
+        :param constrain: whether theta_min is always below the identity and theta_max always above
+        """
+        super().__init__(np.inf, input_dim=input_dim, img_size=img_size, minibatch_size=minibatch_size, **kwargs)
+        self.constrain = constrain
+        self.radians = radians
+        if constrain:
+            raise NotImplementedError   # we might want to implement this at some point
+        else:
+            self.theta_min = gpflow.Parameter(theta_min, dtype=default_float())
+            self.theta_max = gpflow.Parameter(theta_max, dtype=default_float())
+
+    def orbit_minibatch(self, X):
+        eps = tf.random.uniform([self.minibatch_size, 5], 0., 1., dtype=default_float())
+        # only unconstrained version for now
+        theta_min = tf.reshape(self.theta_min, [1, -1])
+        theta_max = tf.reshape(self.theta_max, [1, -1])
+        thetas = theta_min + (theta_max - theta_min) * eps
+        stn_thetas = tf.map_fn(lambda thetas: _stn_theta_vec(thetas, radians=self.radians), thetas)
+
+        Ximgs = tf.reshape(X, [-1, self.img_size(X), self.img_size(X)])
+
+        return apply_stn_batch(Ximgs, stn_thetas)
