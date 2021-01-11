@@ -5,7 +5,9 @@ from tensorflow_probability import bijectors as tfb
 import gpflow
 from gpflow.config import default_float
 from gpflow.utilities.bijectors import positive
-from .image_transforms import rotate_img_angles, rotate_img_angles_stn, apply_stn_batch, _stn_theta_vec
+from .image_transforms import rotate_img_angles, rotate_img_angles_stn, apply_stn_batch, _stn_theta_vec, \
+    apply_stn_batch_colour
+from .transformer import spatial_transformer_network as stn
 
 
 class Orbit(gpflow.base.Module):
@@ -102,14 +104,14 @@ class ImageRotQuant(ImageOrbit):
     Kernel invariant to any quantised rotations of the input image.
     """
 
-    def __init__(self, orbit_size=90, angle=359.0, interpolation_method="NEAREST", 
-        input_dim=None, img_size=None, use_stn=False, **kwargs):
+    def __init__(self, orbit_size=90, angle=359.0, interpolation_method="NEAREST",
+                 input_dim=None, img_size=None, use_stn=False, **kwargs):
         super().__init__(int(orbit_size), input_dim=input_dim, img_size=img_size, **kwargs)
         self.interpolation = interpolation_method if not use_stn else "BILINEAR"
         low_const = tf.constant(0.0, dtype=default_float())
         high_const = tf.constant(360.0, dtype=default_float())
-        self.angle = gpflow.Parameter(angle, transform=tfb.Sigmoid(low_const, high_const), name='angle')  
-        self.orbit_size = orbit_size
+        self.angle = gpflow.Parameter(angle, transform=tfb.Sigmoid(low_const, high_const), name='angle')
+        self._orbit_size = orbit_size
         self.use_stn = use_stn
 
     def orbit_full(self, X):
@@ -155,7 +157,7 @@ class GeneralSpatialTransform(ImageOrbit):
 
     def __init__(self, theta_min=np.array([1., 0., 0., 0., 1., 0.]),
                  theta_max=np.array([1., 0., 0., 0., 1., 0.]), constrain=False, input_dim=None, img_size=None,
-                 minibatch_size=10, initialization=0., **kwargs):
+                 minibatch_size=10, initialization=0., colour=False, **kwargs):
         """
         :param theta_min: one end of the range; identity = [1, 0, 0, 0, 1, 0]
         :param theta_max: other end of the range; identity = [1, 0, 0, 0, 1, 0]
@@ -163,6 +165,7 @@ class GeneralSpatialTransform(ImageOrbit):
         """
         super().__init__(np.inf, input_dim=input_dim, img_size=img_size, minibatch_size=minibatch_size, **kwargs)
         self.constrain = constrain
+        self.colour = colour
         if constrain:
             self.theta_min_0 = gpflow.Parameter(1. - theta_min[0], dtype=default_float(), transform=positive())
             self.theta_min_1 = gpflow.Parameter(-theta_min[1], dtype=default_float(), transform=positive())
@@ -195,9 +198,11 @@ class GeneralSpatialTransform(ImageOrbit):
             theta_max = tf.reshape(self.theta_max, [1, -1])
         thetas = theta_min + (theta_max - theta_min) * eps
 
-        Ximgs = tf.reshape(X, [-1, self.img_size(X), self.img_size(X)])
-
-        return apply_stn_batch(Ximgs, thetas)
+        if self.colour:
+            return apply_stn_batch_colour(X, thetas)
+        else:
+            Ximgs = tf.reshape(X, [-1, self.img_size(X), self.img_size(X)])
+            return apply_stn_batch(Ximgs, thetas)
 
 
 class InterpretableSpatialTransform(ImageOrbit):
@@ -209,7 +214,7 @@ class InterpretableSpatialTransform(ImageOrbit):
 
     def __init__(self, theta_min=np.array([0., 1., 1., 0., 0.]),
                  theta_max=np.array([0., 1., 1., 0., 0.]), constrain=False, input_dim=None, img_size=None,
-                 minibatch_size=10, radians=False, **kwargs):
+                 minibatch_size=10, radians=False, colour=False, **kwargs):
         """
         :param theta_min: one end of the range
         :param theta_max: other end of the range
@@ -218,8 +223,9 @@ class InterpretableSpatialTransform(ImageOrbit):
         super().__init__(np.inf, input_dim=input_dim, img_size=img_size, minibatch_size=minibatch_size, **kwargs)
         self.constrain = constrain
         self.radians = radians
+        self.colour = colour
         if constrain:
-            raise NotImplementedError   # we might want to implement this at some point
+            raise NotImplementedError  # we might want to implement this at some point
         else:
             self.theta_min = gpflow.Parameter(theta_min, dtype=default_float())
             self.theta_max = gpflow.Parameter(theta_max, dtype=default_float())
@@ -232,9 +238,11 @@ class InterpretableSpatialTransform(ImageOrbit):
         thetas = theta_min + (theta_max - theta_min) * eps
         stn_thetas = tf.map_fn(lambda thetas: _stn_theta_vec(thetas, radians=self.radians), thetas)
 
-        Ximgs = tf.reshape(X, [-1, self.img_size(X), self.img_size(X)])
-
-        return apply_stn_batch(Ximgs, stn_thetas)
+        if self.colour:
+            return apply_stn_batch_colour(X, stn_thetas)
+        else:
+            Ximgs = tf.reshape(X, [-1, self.img_size(X), self.img_size(X)])
+            return apply_stn_batch(Ximgs, stn_thetas)
 
 
 class ColorTransform(ImageOrbit):
@@ -262,9 +270,7 @@ class ColorTransform(ImageOrbit):
 
     def orbit_minibatch(self, X):
         # expand X across orbit_size dim.
-        #X_orbit = tf.tile(np.expand_dims(X, 1), [1, self.minibatch_size, 1, 1, 1])
         X_orbit = tf.tile(tf.expand_dims(X, 1), [1, self.minibatch_size, 1, 1, 1])
-
 
         # apply contrast transform first
         # sample contrast_change via reparam. trick
@@ -281,10 +287,3 @@ class ColorTransform(ImageOrbit):
         X_orbit = tf.clip_by_value(X_orbit + brightness_change, 0., 1.)
 
         return X_orbit
-
-
-
-
-
-
-

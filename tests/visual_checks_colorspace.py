@@ -1,5 +1,4 @@
 from invgp.kernels import orbits
-from invgp_experiments.datasets import load_mnist
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from deepkernelinv.utils.load_datasets import load
