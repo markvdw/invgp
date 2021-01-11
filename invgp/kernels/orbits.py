@@ -157,7 +157,7 @@ class GeneralSpatialTransform(ImageOrbit):
 
     def __init__(self, theta_min=np.array([1., 0., 0., 0., 1., 0.]),
                  theta_max=np.array([1., 0., 0., 0., 1., 0.]), constrain=False, input_dim=None, img_size=None,
-                 minibatch_size=10, initialization=0., **kwargs):
+                 minibatch_size=10, initialization=0., colour=False, **kwargs):
         """
         :param theta_min: one end of the range; identity = [1, 0, 0, 0, 1, 0]
         :param theta_max: other end of the range; identity = [1, 0, 0, 0, 1, 0]
@@ -165,6 +165,7 @@ class GeneralSpatialTransform(ImageOrbit):
         """
         super().__init__(np.inf, input_dim=input_dim, img_size=img_size, minibatch_size=minibatch_size, **kwargs)
         self.constrain = constrain
+        self.colour = colour
         if constrain:
             self.theta_min_0 = gpflow.Parameter(1. - theta_min[0], dtype=default_float(), transform=positive())
             self.theta_min_1 = gpflow.Parameter(-theta_min[1], dtype=default_float(), transform=positive())
