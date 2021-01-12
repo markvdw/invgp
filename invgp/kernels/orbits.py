@@ -243,3 +243,47 @@ class InterpretableSpatialTransform(ImageOrbit):
         else:
             Ximgs = tf.reshape(X, [-1, self.img_size(X), self.img_size(X)])
             return apply_stn_batch(Ximgs, stn_thetas)
+
+
+class ColorTransform(ImageOrbit):
+    """
+    Differetiable contrast and brightness adjustment
+    """
+
+    def __init__(self, input_dim=None, img_size=None,
+                 minibatch_size=10, log_lims_contrast=[-2., 2.], log_lims_brightness=[-2., 2.], **kwargs):
+        """
+        :param log_lims_contrast: lower and upper end of range for contrast, logit
+        :param log_lims_contrast: lower and upper end of range for contrast, logit
+        """
+        super().__init__(np.inf, input_dim=input_dim, img_size=img_size, minibatch_size=minibatch_size, **kwargs)
+        self.log_lims_brightness = gpflow.Parameter(log_lims_brightness, dtype=default_float())
+        self.log_lims_contrast = gpflow.Parameter(log_lims_contrast, dtype=default_float())
+
+    @property
+    def lims_contrast(self):
+        return tf.math.sigmoid(self.log_lims_contrast) * 2 - 1
+
+    @property
+    def lims_brightness(self):
+        return tf.math.sigmoid(self.log_lims_brightness) * 2 - 1
+
+    def orbit_minibatch(self, X):
+        # expand X across orbit_size dim.
+        X_orbit = tf.tile(tf.expand_dims(X, 1), [1, self.minibatch_size, 1, 1, 1])
+
+        # apply contrast transform first
+        # sample contrast_change via reparam. trick
+        eps = tf.random.uniform([1, self.minibatch_size, 1, 1, 1], 0., 1., dtype=default_float())
+        contrast_change = eps * (self.lims_contrast[1] - self.lims_contrast[0]) + self.lims_contrast[0]
+        contrast_change = contrast_change * 255.
+        factor = (259. * (contrast_change + 255.)) / (255.* (259. - contrast_change))
+        # apply contrast_change and clip values to [0, 1]
+        X_orbit = tf.clip_by_value(factor * (X_orbit * 255. - 128.) + 128., 0., 255.) / 255.
+
+        # then apply brightness transform
+        eps = tf.random.uniform([1, self.minibatch_size, 1, 1, 1], 0., 1., dtype=default_float())
+        brightness_change = eps * (self.lims_brightness[1] - self.lims_brightness[0]) + self.lims_brightness[0]
+        X_orbit = tf.clip_by_value(X_orbit + brightness_change, 0., 1.)
+
+        return X_orbit
