@@ -5,6 +5,8 @@ from gpflow.models.model import InputData, RegressionData
 
 from invgp.samplers import sample_matheron
 
+from typing import Tuple
+
 
 class SampleSVGP(SVGP):
     def __init__(
@@ -114,4 +116,23 @@ class SampleSVGP(SVGP):
                 num_samples=num_samples,
             )
 
+
         return samples  # [..., (S), N, P]
+
+    def predict_y(
+        self,
+        Xnew: InputData,
+        num_samples: int = None,
+        full_cov: bool = True,
+        full_output_cov: bool = False,
+        matheron_sampler: bool = False,
+    ) -> Tuple[tf.Tensor, tf.Tensor]:
+
+        f_samples = self.predict_f_samples(Xnew, full_cov = True, full_output_cov = False, num_samples = self.num_samples, matheron_sampler = self.matheron_sampler)
+
+        f_mean = tf.reduce_mean(f_samples, axis = 0)
+        f_var = tf.reduce_mean(f_samples**2, axis = 0) - f_mean**2
+
+        return self.likelihood.predict_mean_and_var(f_mean, f_var)
+
+        
