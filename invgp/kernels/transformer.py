@@ -217,27 +217,27 @@ def bilinear_sampler(img, x, y):
     y = tf.cast(y, 'float32')
 
     # rescale x and y to [0, W/H]
-    x = 0.5 * ((x + 1.0) * tf.cast(W, 'float32'))
-    y = 0.5 * ((y + 1.0) * tf.cast(H, 'float32'))
+    x = 0.5 * ((x + 1.0) * tf.cast(W-1, 'float32'))
+    y = 0.5 * ((y + 1.0) * tf.cast(H-1, 'float32'))
 
     # grab 4 nearest corner points for each (x_i, y_i)
-    # i.e. we need a rectangle around the point of interest
+    # i.e. we need a rectangle around the point of interest - CHECK NON-IDENTITY
     x0 = tf.cast(tf.floor(x), 'int32')
     x1 = x0 + 1
-    y0 = tf.cast(tf.floor(y), 'int32')
+    y0 = tf.cast(tf.floor(y), 'int32') 
     y1 = y0 + 1
 
     # clip to range [0, H/W] to not violate img boundaries
     x0 = tf.clip_by_value(x0, zero, max_x)
-    x1 = tf.clip_by_value(x1, zero, max_x)
+    x1 = tf.clip_by_value(x1, zero, max_x + 1)
     y0 = tf.clip_by_value(y0, zero, max_y)
-    y1 = tf.clip_by_value(y1, zero, max_y)
+    y1 = tf.clip_by_value(y1, zero, max_y + 1)
 
     # get pixel value at corner coords
     Ia = get_pixel_value(img, x0, y0)
-    Ib = get_pixel_value(img, x0, y1)
-    Ic = get_pixel_value(img, x1, y0)
-    Id = get_pixel_value(img, x1, y1)
+    Ib = get_pixel_value(img, x0, tf.clip_by_value(y1, zero, max_y))
+    Ic = get_pixel_value(img, tf.clip_by_value(x1, zero, max_x), y0)
+    Id = get_pixel_value(img, tf.clip_by_value(x1, zero, max_x), tf.clip_by_value(y1, zero, max_y))
 
     # recast as float for delta calculation
     x0 = tf.cast(x0, 'float32')

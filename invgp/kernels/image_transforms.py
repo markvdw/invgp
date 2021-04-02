@@ -78,7 +78,7 @@ def _stn_theta_vec(thetas, radians=False):
     c = tf.cos(angle_rad)
 
     return tf.convert_to_tensor(
-        [sx * c - ty * sx * s, tx * sy * c - sy * s, 0., sx * s + ty * sx * c, tx * sy * s + sy * c, 0.],
+        [sx * c - ty*sx * s, tx * sy * c - sy * s - s*sy*tx*ty, 0., sx * s + ty * sx * c, c*sy*tx*ty + tx*sy * s + sy * c, 0.],
         dtype=default_float())
 
 
