@@ -62,6 +62,8 @@ def _stn_theta_vec(thetas, radians=False):
     :param sy: scale in y direction
     :param tx: shear in x direction
     :param ty: shear in y direction
+    :param px: translation in x direction
+    :param py: translation in y direction
     :return:
     """
     # angle_deg, sx, sy, tx, ty = thetas
@@ -69,16 +71,21 @@ def _stn_theta_vec(thetas, radians=False):
     sy = thetas[2]
     tx = thetas[3]
     ty = thetas[4]
+    px = thetas[5]
+    py = thetas[6]
 
     if radians:
         angle_rad = thetas[0]
-    else:  # convert angle to radians if it's not already 
+    else:  # convert angle to radians if it's not already
         angle_rad = tf.cast(thetas[0] / 180 * np.pi, default_float())
     s = tf.sin(angle_rad)
     c = tf.cos(angle_rad)
 
     return tf.convert_to_tensor(
-        [sx * c - ty*sx * s, tx * sy * c - sy * s - s*sy*tx*ty, 0., sx * s + ty * sx * c, c*sy*tx*ty + tx*sy * s + sy * c, 0.],
+        [sx * c - ty*sx * s, tx * sy * c - sy * s - s*sy*tx*ty,
+         -px*(sx * c - ty*sx * s) - py*(tx * sy * c - sy * s - s*sy*tx*ty),
+         sx * s + ty * sx * c, c*sy*tx*ty + tx*sy * s + sy * c,
+         -px*(sx * s + ty * sx * c) - py*(c*sy*tx*ty + tx*sy * s + sy * c)],
         dtype=default_float())
 
 

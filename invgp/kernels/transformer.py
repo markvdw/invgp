@@ -221,7 +221,7 @@ def bilinear_sampler(img, x, y):
     y = 0.5 * ((y + 1.0) * tf.cast(H-1, 'float32'))
 
     # grab 4 nearest corner points for each (x_i, y_i)
-    # i.e. we need a rectangle around the point of interest - CHECK NON-IDENTITY
+    # i.e. we need a rectangle around the point of interest
     x0 = tf.cast(tf.floor(x), 'int32')
     x1 = x0 + 1
     y0 = tf.cast(tf.floor(y), 'int32') 
