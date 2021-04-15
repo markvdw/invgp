@@ -209,11 +209,12 @@ class InterpretableSpatialTransform(ImageOrbit):
     """
     Kernel invariant to to transformations using Spatial Transformer Networks (STNs); this correponds to six-parameter
     affine transformations.
-    This version of the kernel is parameterised by physical components rotation angle, scale in x/y direction, shear in x/y direction: [angle_deg, sx, sy, tx, ty].
+    This version of the kernel is parameterised by physical components rotation angle, scale in x/y direction, shear in x/y direction,
+    translation in x/y direction (scaled so that 1 shifts the image by half its size): [angle_deg, sx, sy, tx, ty, px, py].
     """
 
-    def __init__(self, theta_min=np.array([0., 1., 1., 0., 0.]),
-                 theta_max=np.array([0., 1., 1., 0., 0.]), constrain=False, input_dim=None, img_size=None,
+    def __init__(self, theta_min=np.array([0., 1., 1., 0., 0., 0., 0.]),
+                 theta_max=np.array([0., 1., 1., 0., 0., 0., 0.]), constrain=False, input_dim=None, img_size=None,
                  minibatch_size=10, radians=False, colour=False, **kwargs):
         """
         :param theta_min: one end of the range
@@ -231,7 +232,7 @@ class InterpretableSpatialTransform(ImageOrbit):
             self.theta_max = gpflow.Parameter(theta_max, dtype=default_float())
 
     def orbit_minibatch(self, X):
-        eps = tf.random.uniform([self.minibatch_size, 5], 0., 1., dtype=default_float())
+        eps = tf.random.uniform([self.minibatch_size, 7], 0., 1., dtype=default_float())
         # only unconstrained version for now
         theta_min = tf.reshape(self.theta_min, [1, -1])
         theta_max = tf.reshape(self.theta_max, [1, -1])
