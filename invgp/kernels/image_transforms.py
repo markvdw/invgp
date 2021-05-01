@@ -98,7 +98,6 @@ def _apply_stn(Ximgs, theta):
     :return: [None, H, W, 1]
     """
     theta = tf.reshape(theta, [1, -1])
-    theta = tf.tile(theta, [tf.shape(Ximgs)[0], 1])
 
     return tf.reshape(tf.squeeze(stn(Ximgs, theta)), [tf.shape(Ximgs)[0], tf.shape(Ximgs)[1] * tf.shape(Ximgs)[2]])
 

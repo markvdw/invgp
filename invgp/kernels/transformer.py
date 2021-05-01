@@ -69,7 +69,7 @@ def spatial_transformer_network(input_fmap, theta, out_dims=None, **kwargs):
     C = tf.shape(input_fmap)[3]
 
     # reshape theta to (B, 2, 3)
-    theta = tf.reshape(theta, [B, 2, 3])
+    theta = tf.reshape(theta, [2, 3])
 
     # generate grids of same size or upsample/downsample if specified
     if out_dims:
@@ -79,8 +79,8 @@ def spatial_transformer_network(input_fmap, theta, out_dims=None, **kwargs):
     else:
         batch_grids = affine_grid_generator(H, W, theta)
 
-    x_s = batch_grids[:, 0, :, :]
-    y_s = batch_grids[:, 1, :, :]
+    x_s = batch_grids[0, :, :]
+    y_s = batch_grids[1, :, :]
 
     # sample input with grid to get output
     out_fmap = bilinear_sampler(input_fmap, x_s, y_s)
@@ -104,13 +104,15 @@ def get_pixel_value(img, x, y):
     - output: tensor of shape (B, H, W, C)
     """
     shape = tf.shape(x)
-    batch_size = shape[0]
-    height = shape[1]
-    width = shape[2]
+    batch_size = img.shape[0]
+    height = shape[0]
+    width = shape[1]
 
     batch_idx = tf.range(0, batch_size)
     batch_idx = tf.reshape(batch_idx, (batch_size, 1, 1))
     b = tf.tile(batch_idx, (1, height, width))
+    y = tf.tile(tf.reshape(y, (1, height, width)), (batch_size, 1, 1))
+    x = tf.tile(tf.reshape(x, (1, height, width)), (batch_size, 1, 1))
 
     indices = tf.stack([b, y, x], 3)
 
@@ -148,9 +150,6 @@ def affine_grid_generator(height, width, theta):
     [1]: the affine transformation allows cropping, translation,
          and isotropic scaling.
     """
-    # grab batch size
-    num_batch = tf.shape(theta)[0]
-
     # create normalized 2D grid
     x = tf.linspace(-1.0, 1.0, width)
     y = tf.linspace(-1.0, 1.0, height)
@@ -164,20 +163,15 @@ def affine_grid_generator(height, width, theta):
     ones = tf.ones_like(x_t_flat)
     sampling_grid = tf.stack([x_t_flat, y_t_flat, ones])
 
-    # repeat grid num_batch times
-    sampling_grid = tf.expand_dims(sampling_grid, axis=0)
-    sampling_grid = tf.tile(sampling_grid, tf.stack([num_batch, 1, 1]))
-
     # cast to float32 (required for matmul)
     theta = tf.cast(theta, 'float32')
     sampling_grid = tf.cast(sampling_grid, 'float32')
 
     # transform the sampling grid - batch multiply
     batch_grids = tf.matmul(theta, sampling_grid)
-    # batch grid has shape (num_batch, 2, H*W)
 
     # reshape to (num_batch, H, W, 2)
-    batch_grids = tf.reshape(batch_grids, [num_batch, 2, height, width])
+    batch_grids = tf.reshape(batch_grids, [2, height, width])
 
     return batch_grids
 
@@ -224,7 +218,7 @@ def bilinear_sampler(img, x, y):
     # i.e. we need a rectangle around the point of interest
     x0 = tf.cast(tf.floor(x), 'int32')
     x1 = x0 + 1
-    y0 = tf.cast(tf.floor(y), 'int32') 
+    y0 = tf.cast(tf.floor(y), 'int32')
     y1 = y0 + 1
 
     # clip to range [0, H/W] to not violate img boundaries
@@ -252,10 +246,10 @@ def bilinear_sampler(img, x, y):
     wd = (x - x0) * (y - y0)
 
     # add dimension for addition
-    wa = tf.expand_dims(wa, axis=3)
-    wb = tf.expand_dims(wb, axis=3)
-    wc = tf.expand_dims(wc, axis=3)
-    wd = tf.expand_dims(wd, axis=3)
+    wa = tf.expand_dims(wa, axis=2)
+    wb = tf.expand_dims(wb, axis=2)
+    wc = tf.expand_dims(wc, axis=2)
+    wd = tf.expand_dims(wd, axis=2)
 
     # compute output
     out = tf.add_n([wa * Ia, wb * Ib, wc * Ic, wd * Id])
