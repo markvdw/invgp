@@ -139,7 +139,6 @@ def apply_stn_batch_colour(Ximgs, thetas):
         :return: [None, H, W, 1]
         """
         theta = tf.reshape(theta, [1, -1])
-        theta = tf.tile(theta, [tf.shape(Ximgs)[0], 1])
         return stn(Ximgs, theta)
 
     Ximgs = tf.cast(Ximgs, tf.float32)
