@@ -129,11 +129,13 @@ ANGLE_JITTER = 1e0  # minimal value for the angle variable (to be safe when tran
 
 class ImageRotation(ImageOrbit):
     def __init__(self, angle=ANGLE_JITTER, interpolation_method="NEAREST", use_stn=False,
-                 input_dim=None, img_size=None, minibatch_size=10, **kwargs):
+                 input_dim=None, img_size=None, minibatch_size=10, radians=False, **kwargs):
         super().__init__(np.inf, input_dim=input_dim, img_size=img_size, minibatch_size=minibatch_size, **kwargs)
         self.interpolation = interpolation_method if not use_stn else "BILINEAR"
+        self.radians = radians
         low_const = tf.constant(0.0, dtype=default_float())
-        high_const = tf.constant(180.0, dtype=default_float())
+        high = 3.14 if self.radians else 180
+        high_const = tf.constant(high, dtype=default_float())
         self.angle = gpflow.Parameter(angle, transform=tfb.Sigmoid(low_const, high_const))  # constrained to [0, 180]
         self.use_stn = use_stn
 
@@ -141,11 +143,10 @@ class ImageRotation(ImageOrbit):
         # Reparameterise angle
         eps = tf.random.uniform([self.minibatch_size], 0., 1., dtype=default_float())
         angles = -self.angle + 2. * self.angle * eps
-        Ximgs = tf.reshape(X, [-1, self.img_size(X), self.img_size(X)])
         if self.use_stn:
-            return rotate_img_angles_stn(Ximgs, angles)  # STN always uses bilinear interpolation
+            return rotate_img_angles_stn(X, angles, radians=self.radians)  # STN always uses bilinear interpolation
         else:
-            return rotate_img_angles(Ximgs, angles, self.interpolation)
+            return rotate_img_angles(X, angles, self.interpolation)
 
 
 class GeneralSpatialTransform(ImageOrbit):

@@ -24,7 +24,7 @@ def rotate_img_angles(Ximgs, angles, interpolation_method):
     return tf.transpose(tf.map_fn(rotate, angles, dtype=default_float()), (1, 0, 2))
 
 
-def rotate_img_angles_stn(Ximgs, angles):
+def rotate_img_angles_stn(Ximgs, angles, radians=False):
     """
     Uses spatial transformer networks to rotate a batch of images by different angles. The entire batch is rotated
     by all angles
@@ -32,25 +32,27 @@ def rotate_img_angles_stn(Ximgs, angles):
     :param angles: angles in degrees to rotate by [P]
     :return: [None, P, H*W]
     """
+
     Ximgs = tf.cast(Ximgs, tf.float32)
     angles = tf.cast(angles, tf.float32)
+    if radians:
+        angles_rad = angles
+    else:
+        angles_rad = tf.cast(angles / 180 * np.pi, default_float())
 
     if len(Ximgs.get_shape()) == 3:
         Ximgs = tf.expand_dims(Ximgs, -1)  # [None, H, W, 1]
 
     def rotate(angle):
         # Prepare angle
-        angle_rad = tf.cast(angle / 180 * np.pi, default_float())
         # Compute affine transformation (tile as per image)
-        theta = tf.stack([tf.cos(angle_rad), -tf.sin(angle_rad), 0., tf.sin(angle_rad), tf.cos(angle_rad), 0.])
+        theta = tf.stack([tf.cos(angle), -tf.sin(angle), 0., tf.sin(angle), tf.cos(angle), 0.])
         theta = tf.reshape(theta, [1, -1])
-        theta = tf.tile(theta, [tf.shape(Ximgs)[0], 1])
+        transformed = stn(Ximgs, theta)
+        return transformed
 
-        return tf.reshape(
-            tf.squeeze(stn(Ximgs, theta)), [tf.shape(Ximgs)[0], tf.shape(Ximgs)[1] * tf.shape(Ximgs)[2]]
-        )  # [None, H*W]
+    result = tf.transpose(tf.map_fn(rotate, angles_rad, dtype=Ximgs.dtype), (1, 0, 2, 3, 4))
 
-    result = tf.transpose(tf.map_fn(rotate, angles, dtype=Ximgs.dtype), (1, 0, 2))
     return tf.cast(result, default_float())  # [None, P, H*W]
 
 
