@@ -223,9 +223,9 @@ def bilinear_sampler(img, x, y):
 
     # clip to range [0, H/W] to not violate img boundaries
     x0 = tf.clip_by_value(x0, zero, max_x)
-    x1 = tf.clip_by_value(x1, zero, max_x + 1)
+    x1 = tf.clip_by_value(x1, zero, max_x)
     y0 = tf.clip_by_value(y0, zero, max_y)
-    y1 = tf.clip_by_value(y1, zero, max_y + 1)
+    y1 = tf.clip_by_value(y1, zero, max_y)
 
     # get pixel value at corner coords
     Ia = get_pixel_value(img, x0, y0)
