@@ -109,7 +109,7 @@ class ImageRotQuant(ImageOrbit):
         super().__init__(int(orbit_size), input_dim=input_dim, img_size=img_size, **kwargs)
         self.interpolation = interpolation_method if not use_stn else "BILINEAR"
         low_const = tf.constant(0.0, dtype=default_float())
-        high_const = tf.constant(360.0, dtype=default_float())
+        high_const = tf.constant(361.0, dtype=default_float())
         self.angle = gpflow.Parameter(angle, transform=tfb.Sigmoid(low_const, high_const), name='angle')
         self._orbit_size = orbit_size
         self.use_stn = use_stn
