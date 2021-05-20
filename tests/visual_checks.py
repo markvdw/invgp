@@ -30,7 +30,6 @@ if args.orbit == 'sampled_rot':
     orbit = orbits.ImageRotation(
         angle=1., use_stn=True,
         minibatch_size=10, radians=True)
-        #img_size=args.image_shape)
 
 Xo = orbit(X[:2, :])
 
@@ -42,7 +41,6 @@ if args.dataset == "CIFAR10":
         ax[i, 0].imshow(tf.reshape(Xo[0, i-1, :], args.image_shape))
         ax[i, 1].imshow(tf.reshape(Xo[1, i-1, :], args.image_shape))
     plt.show()
-
 
 if args.dataset == "MNIST":
     fig, ax = plt.subplots(11, 2)
