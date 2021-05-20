@@ -222,15 +222,15 @@ def bilinear_sampler(img, x, y):
     y1 = y0 + 1
 
     # clip to range [0, H/W] to not violate img boundaries
-    x0 = tf.clip_by_value(x0, zero, max_x)
-    x1 = tf.clip_by_value(x1, zero, max_x)
-    y0 = tf.clip_by_value(y0, zero, max_y)
-    y1 = tf.clip_by_value(y1, zero, max_y)
+    x0 = tf.clip_by_value(x0, zero, max_x + 1)
+    x1 = tf.clip_by_value(x1, zero, max_x + 1)
+    y0 = tf.clip_by_value(y0, zero, max_y + 1)
+    y1 = tf.clip_by_value(y1, zero, max_y + 1)
 
     # get pixel value at corner coords
-    Ia = get_pixel_value(img, x0, y0)
-    Ib = get_pixel_value(img, x0, tf.clip_by_value(y1, zero, max_y))
-    Ic = get_pixel_value(img, tf.clip_by_value(x1, zero, max_x), y0)
+    Ia = get_pixel_value(img, tf.clip_by_value(x0, zero, max_x), tf.clip_by_value(y0, zero, max_y))
+    Ib = get_pixel_value(img, tf.clip_by_value(x0, zero, max_y), tf.clip_by_value(y1, zero, max_y))
+    Ic = get_pixel_value(img, tf.clip_by_value(x1, zero, max_x), tf.clip_by_value(y0, zero, max_y))
     Id = get_pixel_value(img, tf.clip_by_value(x1, zero, max_x), tf.clip_by_value(y1, zero, max_y))
 
     # recast as float for delta calculation
