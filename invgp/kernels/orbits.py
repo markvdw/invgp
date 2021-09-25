@@ -5,9 +5,9 @@ from tensorflow_probability import bijectors as tfb
 import gpflow
 from gpflow.config import default_float
 from gpflow.utilities.bijectors import positive
-from .image_transforms import rotate_img_angles, rotate_img_angles_stn, apply_stn_batch, _stn_theta_vec, \
-    apply_stn_batch_colour
-from .transformer import spatial_transformer_network as stn
+#from .image_transforms import rotate_img_angles, rotate_img_angles_stn, apply_stn_batch, _stn_theta_vec, \
+#    apply_stn_batch_colour
+#from .transformer import spatial_transformer_network as stn
 
 
 class Orbit(gpflow.base.Module):
@@ -288,3 +288,82 @@ class ColorTransform(ImageOrbit):
         X_orbit = tf.clip_by_value(X_orbit + brightness_change, 0., 1.)
 
         return X_orbit
+
+class Molecules3d(Orbit):
+    def __init__(self, trans_scale=0.5):
+        super().__init__(orbit_size = 2) # Some confusion over what minibatch-size means from my side
+        self.width = gpflow.Parameter(.54 * tf.ones(12))
+        self.trans_scale = trans_scale
+
+    def orbit_minibatch(self, X):
+        xyz, vals, mask = X
+        #mb = self.minibatch_size # Some confusion over what minibatch_size means from my side
+        # Here do some stacking for larger orbit size, and reshape later. Potentially reshape equivalently for vals and mask.
+        xyz = tf.repeat(xyz, repeats = self.orbit_size, axis = 0)
+        #print(xyz)
+        mb = xyz.shape[0]
+        z = tf.random.uniform([mb, 12], dtype = default_float()) * tf.math.softplus(self.width) # Perhaps just constrain width to positive intstead?
+        #z = 0.5*tf.ones([mb, 12], dtype = default_float()) * tf.math.softplus(self.width) # Perhaps just constrain width to positive intstead?
+        #print(z.shape)
+        A = tf.zeros([mb, 4, 4], dtype = default_float())
+        A = tf.Variable(A) # TensorFlow can only assign to variables.
+        A[...,:3,:3].assign( cross_matrix(z[:,:3]) + shear_matrix(z[:,3:6]) + squeeze_matrix(z[:,6:9]) )
+        A[...,:3,3].assign( z[:,9:] )
+        A = tf.linalg.expm(A) # Here Benton et al. does some ode-solver instead!
+        A = tf.convert_to_tensor(A)
+        transformed_xyz = xyz @ A[:,:3,:3] + A[:,None,:3,3]*self.trans_scale
+        transformed_xyz = tf.reshape(transformed_xyz, shape = [-1, self.orbit_size, xyz.shape[1], xyz.shape[2]])
+        # Remark: I have not reshape vals and mask.
+        return transformed_xyz, vals, mask
+
+def cross_matrix(k):
+    K = tf.zeros(k.shape[:-1].as_list()+[3,3], dtype = default_float())
+    K = tf.Variable(K) # TensorFlow can only assign to variables. 
+    K[...,0,1].assign(-k[...,2])
+    K[...,0,2].assign(k[...,1])
+    K[...,1,0].assign(k[...,2])
+    K[...,1,2].assign(-k[...,0]) 
+    K[...,2,0].assign(-k[...,1])
+    K[...,2,1].assign(k[...,0])
+    K = tf.convert_to_tensor(K)
+    return K
+    
+def shear_matrix(k):
+    K = tf.zeros(k.shape[:-1].as_list()+[3,3], dtype = default_float())
+    K = tf.Variable(K) # TensorFlow can only assign to variables. 
+    K[...,0,1].assign(k[...,2])
+    K[...,0,2].assign(k[...,1])
+    K[...,1,0].assign(k[...,2])
+    K[...,1,2].assign(k[...,0])
+    K[...,2,0].assign(k[...,1])
+    K[...,2,1].assign(k[...,0])
+    K = tf.convert_to_tensor(K)
+    return K
+
+def squeeze_matrix(k):
+    K = tf.zeros(k.shape[:-1].as_list()+[3,3], dtype = default_float())
+    K = tf.Variable(K) # TensorFlow can only assign to variables. 
+    K[...,0,0].assign(k[...,0]+k[...,2]) # squeeze + scale
+    K[...,1,1].assign(-k[...,0]+k[...,1]+k[...,2])
+    K[...,2,2].assign(-k[...,1]+k[...,2])
+    K = tf.convert_to_tensor(K)
+    return K
+
+if __name__ == '__main__':
+    '''
+    k = tf.random.uniform([5, 1, 3, 4], dtype = default_float())
+    K = cross_matrix(k)
+    print(K)
+    K = shear_matrix(k)
+    print(K)
+    K = squeeze_matrix(k)
+    print(K)
+    '''
+    n = 3
+    xyz = tf.random.uniform([n,1,3], dtype = default_float())
+    #xyz = 0.4*tf.ones([n,1,3], dtype = default_float())
+    X = xyz, [], []
+    print(X)
+    Molecule = Molecules3d()
+    orbit_X = Molecule.orbit_minibatch(X)
+    print(orbit_X)
