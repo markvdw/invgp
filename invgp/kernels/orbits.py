@@ -295,69 +295,111 @@ class Molecules3d(Orbit):
         self.width = gpflow.Parameter(.54 * tf.ones(12))
         self.trans_scale = trans_scale
 
+#    def orbit_minibatch(self, X):
+#        xyz, vals, mask = X
+#        #mb = self.minibatch_size # Some confusion over what minibatch_size means from my side
+#        # Here do some stacking for larger orbit size, and reshape later. Potentially reshape equivalently for vals and mask.
+#        xyz = tf.repeat(xyz, repeats = self.orbit_size, axis = 0)
+#        #print(xyz)
+#        mb = xyz.shape[0]
+#        #z = tf.random.uniform([mb, 12], dtype = default_float()) * tf.math.softplus(self.width) # Perhaps just constrain width to positive intstead?
+#        z = 0.5*tf.ones([mb, 12], dtype = default_float()) * tf.math.softplus(self.width) # Perhaps just constrain width to positive intstead?
+#        #print(z.shape)
+#        A = tf.zeros([mb, 4, 4], dtype = default_float())
+#        A = tf.Variable(A) # TensorFlow can only assign to variables.
+#        A[...,:3,:3].assign( cross_matrix(z[:,:3]) + shear_matrix(z[:,3:6]) + squeeze_matrix(z[:,6:9]) )
+#        A[...,:3,3].assign( z[:,9:] )
+#        A = tf.linalg.expm(A) # Here Benton et al. does some ode-solver instead!
+#        A = tf.convert_to_tensor(A)
+#        transformed_xyz = xyz @ A[:,:3,:3] + A[:,None,:3,3]*self.trans_scale
+#        transformed_xyz = tf.reshape(transformed_xyz, shape = [-1, self.orbit_size, xyz.shape[1], xyz.shape[2]])
+#        # Remark: I have not reshape vals and mask.
+#        return transformed_xyz, vals, mask
+
     def orbit_minibatch(self, X):
         xyz, vals, mask = X
         #mb = self.minibatch_size # Some confusion over what minibatch_size means from my side
         # Here do some stacking for larger orbit size, and reshape later. Potentially reshape equivalently for vals and mask.
         xyz = tf.repeat(xyz, repeats = self.orbit_size, axis = 0)
-        #print(xyz)
         mb = xyz.shape[0]
         z = tf.random.uniform([mb, 12], dtype = default_float()) * tf.math.softplus(self.width) # Perhaps just constrain width to positive intstead?
-        #z = 0.5*tf.ones([mb, 12], dtype = default_float()) * tf.math.softplus(self.width) # Perhaps just constrain width to positive intstead?
-        #print(z.shape)
-        A = tf.zeros([mb, 4, 4], dtype = default_float())
-        A = tf.Variable(A) # TensorFlow can only assign to variables.
-        A[...,:3,:3].assign( cross_matrix(z[:,:3]) + shear_matrix(z[:,3:6]) + squeeze_matrix(z[:,6:9]) )
-        A[...,:3,3].assign( z[:,9:] )
-        A = tf.linalg.expm(A) # Here Benton et al. does some ode-solver instead!
-        A = tf.convert_to_tensor(A)
-        transformed_xyz = xyz @ A[:,:3,:3] + A[:,None,:3,3]*self.trans_scale
+        B = cross_matrix(z[:,:3]) + shear_matrix(z[:,3:6]) + squeeze_matrix(z[:,6:9]) # [mb, 3, 3]
+        B = tf.pad(B, [[0, 0], [0, 1], [0, 1]])
+        B = B + tf.pad( tf.expand_dims(z[:,9:], axis = 2), [[0, 0], [0, 1], [3, 0]])
+        B = tf.linalg.expm(B)
+        transformed_xyz = xyz @ B[:,:3,:3] + B[:,None,:3,3]*self.trans_scale
         transformed_xyz = tf.reshape(transformed_xyz, shape = [-1, self.orbit_size, xyz.shape[1], xyz.shape[2]])
         # Remark: I have not reshape vals and mask.
         return transformed_xyz, vals, mask
 
 def cross_matrix(k):
-    K = tf.zeros(k.shape[:-1].as_list()+[3,3], dtype = default_float())
-    K = tf.Variable(K) # TensorFlow can only assign to variables. 
-    K[...,0,1].assign(-k[...,2])
-    K[...,0,2].assign(k[...,1])
-    K[...,1,0].assign(k[...,2])
-    K[...,1,2].assign(-k[...,0]) 
-    K[...,2,0].assign(-k[...,1])
-    K[...,2,1].assign(k[...,0])
-    K = tf.convert_to_tensor(K)
-    return K
-    
-def shear_matrix(k):
-    K = tf.zeros(k.shape[:-1].as_list()+[3,3], dtype = default_float())
-    K = tf.Variable(K) # TensorFlow can only assign to variables. 
-    K[...,0,1].assign(k[...,2])
-    K[...,0,2].assign(k[...,1])
-    K[...,1,0].assign(k[...,2])
-    K[...,1,2].assign(k[...,0])
-    K[...,2,0].assign(k[...,1])
-    K[...,2,1].assign(k[...,0])
-    K = tf.convert_to_tensor(K)
+    # k is 2 dimensional
+    K = shear_matrix(k) * [[1, -1, 1], [1, 1, -1], [-1, 1, 1]]
     return K
 
-def squeeze_matrix(k):
-    K = tf.zeros(k.shape[:-1].as_list()+[3,3], dtype = default_float())
-    K = tf.Variable(K) # TensorFlow can only assign to variables. 
-    K[...,0,0].assign(k[...,0]+k[...,2]) # squeeze + scale
-    K[...,1,1].assign(-k[...,0]+k[...,1]+k[...,2])
-    K[...,2,2].assign(-k[...,1]+k[...,2])
-    K = tf.convert_to_tensor(K)
+#def cross_matrix(k):
+#    K = tf.zeros(k.shape[:-1].as_list()+[3,3], dtype = default_float())
+#    K = tf.Variable(K) # TensorFlow can only assign to variables. 
+#    K[...,0,1].assign(-k[...,2])
+#    K[...,0,2].assign(k[...,1])
+#    K[...,1,0].assign(k[...,2])
+#    K[...,1,2].assign(-k[...,0]) 
+#    K[...,2,0].assign(-k[...,1])
+#    K[...,2,1].assign(k[...,0])
+#    K = tf.convert_to_tensor(K)
+#    return K
+    
+def shear_matrix(x):
+    #print(x)
+    def transform(k):
+    #   print(k)
+        T = tf.convert_to_tensor([[0, k[2], k[1]], [k[2], 0, k[0]], [k[1], k[0], 0]])
+        return T
+    K = tf.map_fn(transform, x)
     return K
+
+#def shear_matrix(k):
+#    K = tf.zeros(k.shape[:-1].as_list()+[3,3], dtype = default_float())
+#    K = tf.Variable(K) # TensorFlow can only assign to variables. 
+#    K[...,0,1].assign(k[...,2])
+#    K[...,0,2].assign(k[...,1])
+#    K[...,1,0].assign(k[...,2])
+#    K[...,1,2].assign(k[...,0])
+#    K[...,2,0].assign(k[...,1])
+#    K[...,2,1].assign(k[...,0])
+#    K = tf.convert_to_tensor(K)
+#    return K
+
+def squeeze_matrix(x):
+    def transform(k):
+        T = tf.linalg.diag([k[0]+k[2], -k[0] + k[1] + k[2], -k[1] + k[2]])
+        return T
+    K = tf.map_fn(transform, x)
+    return K
+
+#def squeeze_matrix(k):
+#    K = tf.zeros(k.shape[:-1].as_list()+[3,3], dtype = default_float())
+#    K = tf.Variable(K) # TensorFlow can only assign to variables. 
+#    K[...,0,0].assign(k[...,0]+k[...,2]) # squeeze + scale
+#    K[...,1,1].assign(-k[...,0]+k[...,1]+k[...,2])
+#    K[...,2,2].assign(-k[...,1]+k[...,2])
+#    K = tf.convert_to_tensor(K)
+#    return K
 
 if __name__ == '__main__':
-    '''
-    k = tf.random.uniform([5, 1, 3, 4], dtype = default_float())
+    ''' 
+    k = tf.random.uniform([5, 3], dtype = default_float())
     K = cross_matrix(k)
     print(K)
     K = shear_matrix(k)
     print(K)
+    #K1 = shear_matrix1(k)
+    #print(K1)
+    
     K = squeeze_matrix(k)
     print(K)
+    K1 = squeeze_matrix1(k)
+    print(K1)
     '''
     n = 3
     xyz = tf.random.uniform([n,1,3], dtype = default_float())
@@ -367,3 +409,5 @@ if __name__ == '__main__':
     Molecule = Molecules3d()
     orbit_X = Molecule.orbit_minibatch(X)
     print(orbit_X)
+    orbit_X1 = Molecule.orbit_minibatch1(X)
+    print(orbit_X1)
