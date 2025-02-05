@@ -3,6 +3,8 @@ This is an implementation of the paper *Learning Invariances using the Marginal 
 
 It requires GPflow 2.0.
 
+Note 5 Feb 2025: I just found this repository again, and decided to make it public. I have not tested or run this code in years, so it may not work, and I cannot vouch for how synchronised it is with what we had in the paper, as it has been refactored and used for a variety of different projects since then. However, I thought there may be value in making it public.
+
 ## Tests
 Run the tests using `pytest --cov-report html --cov=invgp`.
 
